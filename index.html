@@ -96,7 +96,7 @@ canvas{display:block;width:100%;border-radius:6px}
     </div>
   </div>
 
-  <!-- 0050：預設值已修正為 5000 股 -->
+  <!-- 0050：預設為 5000 股 -->
   <div class="grid2" style="margin-bottom:10px">
     <div>
       <label>0050 持股數</label>
@@ -155,7 +155,7 @@ canvas{display:block;width:100%;border-radius:6px}
   </div>
 </div>
 
-<!-- 借款設定：預設值已修正為金額 155萬、利率 4.23%、啟始 2026-06、期數 60期 -->
+<!-- 借款設定：預設為金額 155萬、利率 4.23%、啟始 2026-06、期數 60期 -->
 <div class="card card-orange">
   <p class="section-title" style="color:#ffb74d">🏦 信貸借款設定</p>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
@@ -191,6 +191,9 @@ canvas{display:block;width:100%;border-radius:6px}
   <div style="font-size:10px;color:#78909c;margin-bottom:8px">目前曝險比例（占總資產）</div>
   <div class="bar-container" id="expBar"></div>
   <div class="grid4" id="expCards" style="margin-bottom:10px"></div>
+  
+  <div id="combinedDefenseCard" style="margin-bottom:12px;padding:10px;background:rgba(255,213,79,0.06);border:1px solid rgba(255,213,79,0.2);border-radius:8px;text-align:center;font-size:11px;font-weight:600;"></div>
+  
   <div id="expTotal" style="font-size:11px;color:#90a4ae;text-align:center;margin-bottom:10px"></div>
   <div id="loanExpCards"></div>
   <div style="font-size:10px;color:#78909c;margin-bottom:8px;margin-top:10px">最大損失情境</div>
@@ -336,7 +339,7 @@ canvas{display:block;width:100%;border-radius:6px}
 <!-- 結果卡片欄位 -->
 <div class="grid3" style="max-width:640px;margin:0 auto 12px" id="resultCards"></div>
 
-<p class="footer">🚀 雲端自動版：登入或開啟網頁時會全自動更新最新股價並上傳。</p>
+<p class="footer">🚀 雲端自動版：登入 or 開啟網頁時會全自動更新最新股價並上傳。</p>
 
 <script>
 var STORAGE_KEY='portfolio-v4';
@@ -359,6 +362,7 @@ async function autoRefreshAllPrices() {
   try {
     await Promise.all([
       fetchPriceSilent('00631L.TW', 'price631', 'price631val', 'p631time', 'btn631'),
+      fetchPriceSilent('0050.TW', 'price0050', 'price50val', 'p50time', 'btn50'),
       fetchPriceSilent('00865B.TW', 'priceBond', 'priceBondval', 'p865time', 'btn865')
     ]);
   } catch(e) {}
@@ -377,7 +381,9 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
     var price = json.chart.result[0].meta.regularMarketPrice;
     if (price) {
       g(inputId).value = price;
-      if (varName === 'price631val') price631val = price; else priceBondval = price;
+      if (varName === 'price631val') price631val = price; 
+      else if (varName === 'price50val') price50val = price;
+      else priceBondval = price;
       var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
     }
   } catch (e) {
@@ -388,7 +394,9 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
       var priceAlt = jsonAlt.chart.result[0].meta.regularMarketPrice;
       if (priceAlt) {
         g(inputId).value = priceAlt;
-        if (varName === 'price631val') price631val = priceAlt; else priceBondval = priceAlt;
+        if (varName === 'price631val') price631val = priceAlt;
+        else if (varName === 'price50val') price50val = priceAlt;
+        else priceBondval = priceAlt;
         var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
       }
     } catch(err) {}
@@ -402,10 +410,12 @@ function val(id){ return parseFloat(g(id).value)||0; }
 function applyPrice(inputId, varName){
   var v=parseFloat(g(inputId).value);
   if(!isNaN(v)&&v>0){
-    if(varName==='price631val') price631val=v; else priceBondval=v;
+    if(varName==='price631val') price631val=v;
+    else if(varName==='price50val') price50val=v;
+    else priceBondval=v;
     updateAndSync();
   } else {
-    g(inputId).value = varName==='price631val' ? price631val : priceBondval;
+    g(inputId).value = (varName==='price631val') ? price631val : ((varName==='price50val') ? price50val : priceBondval);
   }
 }
 
@@ -431,8 +441,8 @@ function updatePresetActive(containerId,inputId,items,curVal){
 function updateSlider(id){
   var v=val(id);
   var labelMap={
-    'rate631':{el:'rate631Label',suffix:'%'}, 'rateBond':{el:'rateBondLabel',suffix:'%'},
-    'pct631':{el:'pct631Label',suffix:'%'}, 'pctBond':{el:'pctBondLabel',suffix:'%'},
+    'rate631':{el:'rate631Label',suffix:'%'}, 'rate50':{el:'rate50Label',suffix:'%'}, 'rateBond':{el:'rateBondLabel',suffix:'%'},
+    'pct631':{el:'pct631Label',suffix:'%'}, 'pct50':{el:'pct50Label',suffix:'%'}, 'pctBond':{el:'pctBondLabel',suffix:'%'},
     'addOnAmt':{el:'addOnAmtLabel',suffix:'萬'}, 'addOnDrop':{el:'addOnDropLabel',suffix:'%',prefix:'-'}, 'addOnYear':{el:'addOnYearLabel',suffix:'年'}
   };
   var m=labelMap[id];
@@ -585,8 +595,8 @@ function update(){
   var eb=g('expBar'); eb.innerHTML='';
   [[parseFloat(e631Pct),'#4fc3f7'],[parseFloat(e50Pct),'#5c6bc0'],[parseFloat(eBondPct),'#a5d6a7'],[parseFloat(eCashPct),'#ffd54f']].forEach(function(x,i){
     if(x[0]>0){
-      var d=document.createElement('div'); d.style.flex=x[0]; d.style.background=x[1];
-      if(i===0) d.style.borderRadius='6px 0 0 6px'; if(i===3) d.style.borderRadius='0 6px 6px 0';
+      var d = document.createElement('div'); d.style.flex = x[0]; d.style.background = x[1];
+      if(i===0) d.style.borderRadius = '6px 0 0 6px'; if(i===3) d.style.borderRadius = '0 6px 6px 0';
       eb.appendChild(d);
     }
   });
