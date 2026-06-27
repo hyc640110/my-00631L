@@ -96,7 +96,7 @@ canvas{display:block;width:100%;border-radius:6px}
     </div>
   </div>
 
-  <!-- 0050：預設為 5000 股 -->
+  <!-- 0050 -->
   <div class="grid2" style="margin-bottom:10px">
     <div>
       <label>0050 持股數</label>
@@ -155,7 +155,7 @@ canvas{display:block;width:100%;border-radius:6px}
   </div>
 </div>
 
-<!-- 借款設定：預設改為155萬、利率4.23%、啟始2026-06、總期數60期 -->
+<!-- 借款設定 -->
 <div class="card card-orange">
   <p class="section-title" style="color:#ffb74d">🏦 信貸借款設定</p>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
@@ -360,6 +360,7 @@ async function autoRefreshAllPrices() {
   g('storageMsg').textContent = '⚡ 正在自動抓取今日即時股價...';
   isCloudSyncing = true;
   try {
+    // 【修復】0050的標準 Yahoo 代號確認為 0050.TW 傳入
     await Promise.all([
       fetchPriceSilent('00631L.TW', 'price631', 'price631val', 'p631time', 'btn631'),
       fetchPriceSilent('0050.TW', 'price0050', 'price50val', 'p50time', 'btn50'),
@@ -381,7 +382,6 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
     var price = json.chart.result[0].meta.regularMarketPrice;
     if (price) {
       g(inputId).value = price;
-      // 【精確修正】徹底修正變數寫入映射，完美區分 price631val、price50val 與 priceBondval
       if (varName === 'price631val') price631val = price; 
       else if (varName === 'price50val') price50val = price;
       else priceBondval = price;
@@ -395,7 +395,6 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
       var priceAlt = jsonAlt.chart.result[0].meta.regularMarketPrice;
       if (priceAlt) {
         g(inputId).value = priceAlt;
-        // 【精確修正】備援 API 寫入邏輯同步修正
         if (varName === 'price631val') price631val = priceAlt;
         else if (varName === 'price50val') price50val = priceAlt;
         else priceBondval = priceAlt;
@@ -507,13 +506,16 @@ function update(){
   
   g('realEffectiveBeta').textContent = `真實組合Beta: ${realBeta}`;
   
+  // 【重構】動態計算橫條圓角，杜絕幽靈空白格
   var rBar = g('realAllocBar'); rBar.innerHTML = '';
-  [[r631Pct, '#4fc3f7'], [r50Pct, '#5c6bc0'], [rBondPct, '#a5d6a7'], [rCashPct, '#ffd54f']].forEach(function(item, i){
-    if(item[0] > 0){
-      var d = document.createElement('div'); d.style.flex = item[0]; d.style.background = item[1];
-      if(i === 0) d.style.borderRadius = '6px 0 0 6px'; if(i === 3) d.style.borderRadius = '0 6px 6px 0';
-      rBar.appendChild(d);
-    }
+  var rawAllocArr = [[r631Pct, '#4fc3f7'], [r50Pct, '#5c6bc0'], [rBondPct, '#a5d6a7'], [rCashPct, '#ffd54f']];
+  var activeAlloc = rawAllocArr.filter(function(item){ return item[0] > 0; });
+  
+  activeAlloc.forEach(function(item, idx){
+    var d = document.createElement('div'); d.style.flex = item[0]; d.style.background = item[1];
+    if(idx === 0) d.style.borderRadius = '6px 0 0 6px';
+    if(idx === activeAlloc.length - 1) d.style.borderRadius = '0 6px 6px 0';
+    rBar.appendChild(d);
   });
   
   g('realAllocLabels').innerHTML = 
@@ -526,16 +528,18 @@ function update(){
   var dl=g('dropLabel'); if(dl) dl.textContent='觸發跌幅（≈'+triggerPrice+'元）';
 
   var bar=g('allocBar'); bar.innerHTML='';
-  [[pct631,'#4fc3f7'],[pct50,'#5c6bc0'],[pctBond,'#a5d6a7'],[pctCash,'#ffd54f']].forEach(function(item,i){
-    if(item[0]>0){
-      var d=document.createElement('div'); d.style.flex=item[0]; d.style.background=item[1];
-      if(i===0) d.style.borderRadius='6px 0 0 6px'; if(i === 3) d.style.borderRadius='0 6px 6px 0';
-      bar.appendChild(d);
-    }
+  var simAllocArr = [[pct631,'#4fc3f7'],[pct50,'#5c6bc0'],[pctBond,'#a5d6a7'],[pctCash,'#ffd54f']];
+  var activeSim = simAllocArr.filter(function(item){ return item[0] > 0; });
+  activeSim.forEach(function(item, idx){
+    var d=document.createElement('div'); d.style.flex=item[0]; d.style.background=item[1];
+    if(idx===0) d.style.borderRadius='6px 0 0 6px';
+    if(idx===activeSim.length-1) d.style.borderRadius='0 6px 6px 0';
+    bar.appendChild(d);
   });
+  
   var labels=g('allocLabels'); labels.innerHTML='';
   [['00631L '+pct631+'%','#4fc3f7',init631],['0050 '+pct50+'%','#5c6bc0',init50],['00865B '+pctBond+'%','#a5d6a7',initBond],['現金 '+pctCash+'%','#ffd54f',initCash]].forEach(function(x){
-    labels.innerHTML+='<span style="color:'+x[1]+'">'+x[0]+' <span style="color:#78909c">('+fmt(x[2])+')</span></span>';
+    labels.innerHTML+='<span style="color:'+x[1]+'">'+x[0]+' <span style="color:#78909c">('+fmt(x[2])+')</span></span> ';
   });
 
   var loanInterest=loan*loanRate/100; 
@@ -595,18 +599,20 @@ function update(){
   var e631Pct=(etf631Val/totalAssets*100).toFixed(1), e50Pct=(etf50Val/totalAssets*100).toFixed(1), eBondPct=(etfBondVal/totalAssets*100).toFixed(1), eCashPct=(cash/totalAssets*100).toFixed(1);
 
   var eb=g('expBar'); eb.innerHTML='';
-  [[parseFloat(e631Pct),'#4fc3f7'],[parseFloat(e50Pct),'#5c6bc0'],[parseFloat(eBondPct),'#a5d6a7'],[parseFloat(eCashPct),'#ffd54f']].forEach(function(x,i){
-    if(x[0]>0){
-      var d = document.createElement('div'); d.style.flex = x[0]; d.style.background = x[1];
-      if(i===0) d.style.borderRadius = '6px 0 0 6px'; if(i===3) d.style.borderRadius = '0 6px 6px 0';
-      rBar.appendChild(d);
-    }
+  var expActiveArr = [[parseFloat(e631Pct),'#4fc3f7'],[parseFloat(e50Pct),'#5c6bc0'],[parseFloat(eBondPct),'#a5d6a7'],[parseFloat(eCashPct),'#ffd54f']].filter(function(x){return x[0]>0;});
+  expActiveArr.forEach(function(x,i){
+    var d = document.createElement('div'); d.style.flex=x[0]; d.style.background=x[1];
+    if(i===0) d.style.borderRadius='6px 0 0 6px';
+    if(i===expActiveArr.length-1) d.style.borderRadius='0 6px 6px 0';
+    eb.appendChild(d);
   });
+
   var ec=g('expCards'); ec.innerHTML='';
   [
     ['00631L（2x槓桿）',e631Pct,etf631Val,'#4fc3f7'],
     ['0050（大盤權值）',e50Pct,etf50Val,'#5c6bc0'],
-    ['00865B（債券）',eBondPct,etfBondVal,'#a5d6a7']
+    ['00865B（債券）',eBondPct,etfBondVal,'#a5d6a7'],
+    ['現金',eCashPct,cash,'#ffd54f']
   ].forEach(function(x){
     ec.innerHTML+='<div class="stat-card" style="background:'+x[3]+'11;border:1px solid '+x[3]+'33"><div class="stat-label">'+x[0]+'</div><div style="font-size:18px;font-weight:800;color:'+x[3]+'">'+x[1]+'%</div><div style="font-size:10px;color:#546e7a">'+fmt(x[2])+'</div></div>';
   });
@@ -730,10 +736,9 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
   ctx.restore();
 }
 
-function fetchPrice631(){ fetchPriceSilent('00631L.TW','price631','price631val','p631time','btn631').then(updateAndSync); }
-// 修正對外觸發綁定
-function fetchPrice0050(){ fetchPriceSilent('0050.TW','price0050','price50val','p50time','btn50').then(updateAndSync); }
-function fetchPriceBond(){ fetchPriceSilent('00865B.TW','priceBond','priceBondval','p865time','btn865').then(updateAndSync); }
+function fetchPrice631(){ fetchPriceSilent('00631L.TW','price631','price631val','p631time','btn631').then(update); }
+function fetchPrice0050(){ fetchPriceSilent('0050.TW','price0050','price50val','p50time','btn50').then(update); }
+function fetchPriceBond(){ fetchPriceSilent('00865B.TW','priceBond','priceBondval','p865time','btn865').then(update); }
 
 function showMsg(id, text, ms){ var el=g(id); el.textContent=text; setTimeout(function(){ el.textContent=''; }, ms||3000); }
 
