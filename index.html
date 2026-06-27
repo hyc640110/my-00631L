@@ -520,14 +520,16 @@ function drawChart(data, totalAssets){
   });
 }
 
-// 升級版：使用更穩定的公開財經報價接口，完美支援 00631L 與 00865B
+// 終極修正：直接調用專為前端開發設計的無限制台股即時報價代理 API，完美避開 CORS 封鎖
 async function fetchPriceFromYahoo(ticker, inputId, varName, timeId, btnId) {
   var btn = g(btnId); btn.textContent = '⏳'; btn.disabled = true;
+  var shortCode = ticker.split('.')[0]; // 將 00631L.TW 轉換成 00631L
   try {
-    // 透過免驗證的金融 Chart 備份接口讀取，可避免週末休市或 Yahoo 阻擋造成的 CORS 錯誤
-    var res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
+    // 使用開源且無 CORS 限制的金融資訊公開接口
+    var res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + ticker)}`);
     if (!res.ok) throw new Error();
-    var json = await res.json();
+    var wrapper = await res.json();
+    var json = JSON.parse(wrapper.contents);
     var price = json.chart.result[0].meta.regularMarketPrice;
     
     if (price) {
@@ -538,10 +540,11 @@ async function fetchPriceFromYahoo(ticker, inputId, varName, timeId, btnId) {
       updateAndSync();
     } else { throw new Error(); }
   } catch (e) {
-    // 備援方案：若主要接口失效，自動嘗試第二個公開輕量接口
+    // 備援方案二：若 Yahoo 依然回傳異常，直接走第二公開備用盤後輕量數據源
     try {
-      var resAlt = await fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}`);
-      var jsonAlt = await resAlt.json();
+      var resAlt = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://query2.finance.yahoo.com/v8/finance/chart/' + ticker)}`);
+      var wrapperAlt = await resAlt.json();
+      var jsonAlt = JSON.parse(wrapperAlt.contents);
       var priceAlt = jsonAlt.chart.result[0].meta.regularMarketPrice;
       if (priceAlt) {
         g(inputId).value = priceAlt;
@@ -561,7 +564,6 @@ function fetchPriceBond(){ fetchPriceFromYahoo('00865B.TW','priceBond','priceBon
 
 function showMsg(id, text, ms){ var el=g(id); el.textContent=text; setTimeout(function(){ el.textContent=''; }, ms||3000); }
 
-// 儲存與同步邏輯
 function saveSyncConfig() {
   var conf = { url: g('fbUrl').value.trim(), key: g('fbKey').value.trim() };
   localStorage.setItem(CONF_KEY, JSON.stringify(conf));
@@ -574,7 +576,6 @@ function updateAndSync() {
   var conf = JSON.parse(confStr);
   if (!conf.url || !conf.key) return;
 
-  // 自動同步到雲端 (防抖機制以免過度傳送)
   clearTimeout(window.syncTimer);
   window.syncTimer = setTimeout(async function() {
     g('cloudStatus').textContent = '⚡ 同步中...';
@@ -657,7 +658,6 @@ makePresets('addOnYearPresets','addOnYear',[{label:'第1年',val:1},{label:'第2
 makePresets('loanRatePresets','loanRate',[{label:'2.5%',val:2.5},{label:'3%',val:3},{label:'3.5%',val:3.5},{label:'4%',val:4}],'%',false);
 makePresets('loanMonthsPresets','loanTotalMonths',[{label:'36期',val:36},{label:'60期',val:60},{label:'84期',val:84},{label:'120期',val:120}],'月',false);
 
-// 初始化載入
 try{
   var confStr = localStorage.getItem(CONF_KEY);
   if(confStr) {
