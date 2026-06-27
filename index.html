@@ -254,7 +254,7 @@ canvas{display:block;width:100%;border-radius:6px}
             <span style="font-size:11px;color:#ff9800;font-weight:600">加碼金額</span>
             <span id="addOnAmtLabel" class="slider-val" style="background:rgba(255,152,0,0.2);border:1px solid rgba(255,152,0,0.4);color:#ff9800">50萬</span>
           </div>
-          <input type="range" id="addOnAmt" min="20" max="200" step="10" value="50" oninput="updateSlider('addOnAmt')">
+          <input type="range" id="addOnAmt" min="1" max="100" step="1" value="50" oninput="updateSlider('addOnAmt')">
           <div class="presets" id="addOnAmtPresets"></div>
         </div>
       </div>
@@ -272,7 +272,7 @@ canvas{display:block;width:100%;border-radius:6px}
             <span style="font-size:11px;color:#b39ddb;font-weight:600">發生在第幾年</span>
             <span id="addOnYearLabel" class="slider-val" style="background:rgba(179,157,219,0.15);border:1px solid rgba(179,157,219,0.4);color:#b39ddb">2年</span>
           </div>
-          <input type="range" id="addOnYear" min="1" max="5" step="1" value="2" oninput="updateSlider('addOnYear')">
+          <input type="range" id="addOnYear" min="1" max="10" step="1" value="2" oninput="updateSlider('addOnYear')">
           <div class="presets" id="addOnYearPresets"></div>
         </div>
       </div>
@@ -291,7 +291,7 @@ canvas{display:block;width:100%;border-radius:6px}
   </div>
 </div>
 
-<!-- 結果卡片 -->
+<!-- 結果卡片欄位（順序已對調：五年放前面，十年放後面） -->
 <div class="grid3" style="max-width:640px;margin:0 auto 12px" id="resultCards"></div>
 
 <p class="footer">🚀 雲端自動版：登入或開啟網頁時會全自動更新最新股價並上傳。</p>
@@ -483,7 +483,6 @@ function update(){
   });
 
   var loanInterest=loan*loanRate/100; 
-  // 修正這裡：安全防錯計算，避免初始化時造成 JS 當機阻擋登入
   var loanToAsset= (totalAssets) > 0 ? (loan/totalAssets*100).toFixed(1) : '0.0';
   var loanToNet=netAssets>0?(loan/netAssets*100).toFixed(1):'999'; var ls=g('loanSummary');
   if(!loan||loan===0){
@@ -514,8 +513,8 @@ function update(){
   var chartData=[];
   for(var i=0;i<=10;i++){
     var v631=init631*Math.pow(1+rate631/100,i); var vBond=initBond*Math.pow(1+rateBond/100,i);
-    var cashAfter=addOnEnabled&&addOnSource==='cash'?Math.max(0,initCash-addOnAmt):initCash;
-    var vCash=addOnEnabled&&addOnSource==='cash'&&i>=addOnYear?cashAfter:initCash;
+    var cashAfter=addOnEnabled&&addOnSource=='cash'?Math.max(0,initCash-addOnAmt):initCash;
+    var vCash=addOnEnabled&&addOnSource=='cash'&&i>=addOnYear?cashAfter:initCash;
     var vAdd=addOnEnabled&&i>=addOnYear?addOnAmt*Math.pow(1+rate631/100,i-addOnYear):0;
     var totalBase=init631*Math.pow(1+rate631/100,i)+initBond*Math.pow(1+rateBond/100,i)+initCash;
     chartData.push({year:i,v631:Math.round(v631),vAdd:Math.round(vAdd),vBond:Math.round(vBond),vCash:Math.round(vCash),total:Math.round(v631+vBond+vCash+vAdd),totalBase:Math.round(totalBase)});
@@ -523,10 +522,12 @@ function update(){
   drawChart(chartData, totalAssets);
 
   var final=chartData[10], five=chartData[5];
-  var totalCost=totalAssets+(addOnEnabled&&addOnSource==='new'?addOnAmt:0);
+  var totalCost=totalAssets+(addOnEnabled&&addOnSource=='new'?addOnAmt:0);
+  
+  // 修正對調邏輯：重新排列陣列順序，將「五年後」移動至第一位
   var cards=[
-    {label:'十年後（含加碼）',val:fmt(final.total),sub:'+'+fmt(final.total-totalCost),color:'#ce93d8',detail:addOnEnabled?'加碼效益 +'+fmt(final.total-final.totalBase):'00631L '+fmt(final.v631)},
     {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:'#81d4fa',detail:'不加碼對照 '+fmt(five.totalBase)},
+    {label:'十年後（含加碼）',val:fmt(final.total),sub:'+'+fmt(final.total-totalCost),color:'#ce93d8',detail:addOnEnabled?'加碼效益 +'+fmt(final.total-final.totalBase):'00631L '+fmt(final.v631)},
     {label:'組合 Beta',val:beta,sub:beta>1.4?'積極型':'穩健型',color:beta>1.4?'#ff8a65':'#a5d6a7',detail:'00631L×1.9＋00865B×0.05'}
   ];
   var rc=g('resultCards'); rc.innerHTML='';
@@ -689,9 +690,9 @@ makePresets('rate631Presets','rate631',[{label:'10%',val:10},{label:'13%',val:13
 makePresets('rateBondPresets','rateBond',[{label:'3%',val:3},{label:'4.5%',val:4.5},{label:'6%',val:6}],'%',true);
 makePresets('pct631Presets','pct631',[{label:'40%',val:40},{label:'50%',val:50},{label:'60%',val:60}],'%',true);
 makePresets('pctBondPresets','pctBond',[{label:'15%',val:15},{label:'25%',val:25},{label:'30%',val:30}],'%',true);
-makePresets('addOnAmtPresets','addOnAmt',[{label:'50萬',val:50},{label:'100萬',val:100},{label:'150萬',val:150}],'萬',true);
+makePresets('addOnAmtPresets','addOnAmt',[{label:'10萬',val:1},{label:'30萬',val:3},{label:'50萬',val:5}],'萬',true);
 makePresets('addOnDropPresets','addOnDrop',[{label:'-15%',val:15},{label:'-25%',val:25},{label:'-35%',val:35}],'%',true);
-makePresets('addOnYearPresets','addOnYear',[{label:'第1年',val:1},{label:'第2年',val:2},{label:'第3年',val:3}],'年',true);
+makePresets('addOnYearPresets','addOnYear',[{label:'第2年',val:2},{label:'第5年',val:5},{label:'第8年',val:8}],'年',true);
 makePresets('loanRatePresets','loanRate',[{label:'2.5%',val:2.5},{label:'3%',val:3},{label:'3.5%',val:3.5},{label:'4%',val:4}],'%',false);
 makePresets('loanMonthsPresets','loanTotalMonths',[{label:'36期',val:36},{label:'60期',val:60},{label:'84期',val:84},{label:'120期',val:120}],'月',false);
 
