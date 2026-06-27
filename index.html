@@ -18,6 +18,7 @@ h1{font-size:19px;font-weight:800;text-align:center;color:#fff;margin-bottom:4px
 .section-title{font-size:11px;font-weight:700;margin-bottom:12px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px}
 label{font-size:10px;color:#78909c;display:block;margin-bottom:5px}
 input[type=text],input[type=number],input[type=password]{width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:7px 10px;color:#fff;font-size:14px;font-weight:700;outline:none}
 input[type=range]{width:100%;accent-color:#4fc3f7;cursor:pointer}
@@ -52,7 +53,7 @@ canvas{display:block;width:100%;border-radius:6px}
 </head>
 <body>
 
-<h1>三部位＋大跌加碼</h1>
+<h1>四部位＋大跌加碼</h1>
 <p class="sub">十年資產模擬</p>
 
 <!-- 雲端同步面板 -->
@@ -78,6 +79,8 @@ canvas{display:block;width:100%;border-radius:6px}
 <!-- 持股設定 -->
 <div class="card card-blue">
   <p class="section-title" style="color:#4fc3f7">📊 持股與實時配置</p>
+  
+  <!-- 00631L -->
   <div class="grid2" style="margin-bottom:10px">
     <div>
       <label>00631L 持股數</label>
@@ -92,6 +95,24 @@ canvas{display:block;width:100%;border-radius:6px}
       <div class="info-row">市值 <span id="val631" style="color:#4fc3f7">-</span></div>
     </div>
   </div>
+
+  <!-- 新增：0050 -->
+  <div class="grid2" style="margin-bottom:10px">
+    <div>
+      <label>0050 持股數</label>
+      <input type="number" id="shares0050" value="10000" oninput="updateAndSync()">
+    </div>
+    <div>
+      <label>0050 股價 <span id="p50time" style="color:#4caf50;font-size:9px"></span></label>
+      <div class="price-row">
+        <input type="text" id="price0050" value="150.0" onblur="applyPrice('price0050','price50val')" style="color:#5c6bc0">
+        <button class="refresh-btn" id="btn50" style="background:rgba(92,107,192,0.2);border-color:rgba(92,107,192,0.4);color:#5c6bc0" onclick="fetchPrice0050()" title="更新股價">🔄</button>
+      </div>
+      <div class="info-row">市值 <span id="val0050" style="color:#5c6bc0">-</span></div>
+    </div>
+  </div>
+
+  <!-- 00865B -->
   <div class="grid2" style="margin-bottom:10px">
     <div>
       <label>00865B 持股數</label>
@@ -106,6 +127,8 @@ canvas{display:block;width:100%;border-radius:6px}
       <div class="info-row">市值 <span id="valBond" style="color:#a5d6a7">-</span></div>
     </div>
   </div>
+
+  <!-- 現金與總資產 -->
   <div class="grid2" style="margin-bottom:12px">
     <div>
       <label>現金（萬元）</label>
@@ -121,11 +144,11 @@ canvas{display:block;width:100%;border-radius:6px}
     </div>
   </div>
   
-  <!-- 真實持股與現金配置比例條 -->
+  <!-- 真實持股配置權重條 -->
   <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;margin-top:6px;">
     <div style="font-size:10px;color:#78909c;margin-bottom:6px;display:flex;justify-content:between;">
       <span>📊 當前真實資產配置權重</span>
-      <span id="realEffectiveBeta" style="margin-left:auto;color:#ffb74d;">有效Beta: -</span>
+      <span id="realEffectiveBeta" style="margin-left:auto;color:#ffb74d;">真實組合Beta: -</span>
     </div>
     <div class="bar-container" id="realAllocBar" style="height:14px;margin-bottom:6px;"></div>
     <div id="realAllocLabels" style="display:flex;gap:12px;font-size:10px;flex-wrap:wrap;"></div>
@@ -167,15 +190,12 @@ canvas{display:block;width:100%;border-radius:6px}
   <p class="section-title" style="color:#ef9a9a">⚠️ 曝險分析</p>
   <div style="font-size:10px;color:#78909c;margin-bottom:8px">目前曝險比例（占總資產）</div>
   <div class="bar-container" id="expBar"></div>
-  <div class="grid3" id="expCards" style="margin-bottom:10px"></div>
-  
-  <div id="combinedDefenseCard" style="margin-bottom:12px;padding:10px;background:rgba(255,213,79,0.06);border:1px solid rgba(255,213,79,0.2);border-radius:8px;text-align:center;font-size:11px;font-weight:600;"></div>
-  
+  <div class="grid4" id="expCards" style="margin-bottom:10px"></div>
   <div id="expTotal" style="font-size:11px;color:#90a4ae;text-align:center;margin-bottom:10px"></div>
   <div id="loanExpCards"></div>
   <div style="font-size:10px;color:#78909c;margin-bottom:8px;margin-top:10px">最大損失情境</div>
   <div class="grid3" id="lossCards"></div>
-  <div style="font-size:10px;color:#546e7a;text-align:center;margin-top:6px">※ 00631L 以 Beta 1.9；00865B 以 Beta 0.05 計算</div>
+  <div style="font-size:10px;color:#546e7a;text-align:center;margin-top:6px">※ 00631L以 Beta 1.9；0050以 Beta 1.0；00865B以 Beta 0.05 計算</div>
 </div>
 
 <!-- 年化＋配置 -->
@@ -193,6 +213,14 @@ canvas{display:block;width:100%;border-radius:6px}
       </div>
       <div class="slider-row">
         <div class="slider-label">
+          <span style="font-size:11px;color:#5c6bc0;font-weight:600">0050</span>
+          <span id="rate50Label" class="slider-val" style="background:rgba(92,107,192,0.15);border:1px solid rgba(92,107,192,0.4);color:#5c6bc0">9%</span>
+        </div>
+        <input type="range" id="rate50" min="4" max="16" value="9" oninput="updateSlider('rate50')">
+        <div class="presets" id="rate50Presets"></div>
+      </div>
+      <div class="slider-row">
+        <div class="slider-label">
           <span style="font-size:11px;color:#a5d6a7;font-weight:600">00865B</span>
           <span id="rateBondLabel" class="slider-val" style="background:rgba(165,214,167,0.15);border:1px solid rgba(165,214,167,0.4);color:#a5d6a7">4.5%</span>
         </div>
@@ -205,17 +233,25 @@ canvas{display:block;width:100%;border-radius:6px}
       <div class="slider-row">
         <div class="slider-label">
           <span style="font-size:11px;color:#4fc3f7;font-weight:600">00631L</span>
-          <span id="pct631Label" class="slider-val" style="background:rgba(79,195,247,0.15);border:1px solid rgba(79,195,247,0.4);color:#4fc3f7">50%</span>
+          <span id="pct631Label" class="slider-val" style="background:rgba(79,195,247,0.15);border:1px solid rgba(79,195,247,0.4);color:#4fc3f7">40%</span>
         </div>
-        <input type="range" id="pct631" min="20" max="80" step="5" value="50" oninput="updateSlider('pct631')">
+        <input type="range" id="pct631" min="10" max="80" step="5" value="40" oninput="updateSlider('pct631')">
         <div class="presets" id="pct631Presets"></div>
       </div>
       <div class="slider-row">
         <div class="slider-label">
-          <span style="font-size:11px;color:#a5d6a7;font-weight:600">00865B</span>
-          <span id="pctBondLabel" class="slider-val" style="background:rgba(165,214,167,0.15);border:1px solid rgba(165,214,167,0.4);color:#a5d6a7">25%</span>
+          <span style="font-size:11px;color:#5c6bc0;font-weight:600">0050</span>
+          <span id="pct50Label" class="slider-val" style="background:rgba(92,107,192,0.15);border:1px solid rgba(92,107,192,0.4);color:#5c6bc0">20%</span>
         </div>
-        <input type="range" id="pctBond" min="0" max="40" step="5" value="25" oninput="updateSlider('pctBond')">
+        <input type="range" id="pct50" min="0" max="60" step="5" value="20" oninput="updateSlider('pct50')">
+        <div class="presets" id="pct50Presets"></div>
+      </div>
+      <div class="slider-row">
+        <div class="slider-label">
+          <span style="font-size:11px;color:#a5d6a7;font-weight:600">00865B</span>
+          <span id="pctBondLabel" class="slider-val" style="background:rgba(165,214,167,0.15);border:1px solid rgba(165,214,167,0.4);color:#a5d6a7">20%</span>
+        </div>
+        <input type="range" id="pctBond" min="0" max="40" step="5" value="20" oninput="updateSlider('pctBond')">
         <div class="presets" id="pctBondPresets"></div>
       </div>
       <div id="cashPctInfo" style="font-size:10px;color:#ffd54f"></div>
@@ -229,7 +265,7 @@ canvas{display:block;width:100%;border-radius:6px}
     <div style="flex:1">
       <div style="font-size:10px;color:#546e7a;margin-bottom:5px">模擬再平衡分佈</div>
       <div class="bar-container" id="allocBar"></div>
-      <div id="allocLabels" style="display:flex;gap:10px;font-size:10px;flex-wrap:wrap"></div>
+      <div id="allocLabels" style="display:flex;gap:10px;font-size:10px;flex-wrap:wrap}</div>
     </div>
     <div style="text-align:right;margin-left:12px">
       <div style="font-size:10px;color:#546e7a">模擬組合Beta</div>
@@ -290,6 +326,7 @@ canvas{display:block;width:100%;border-radius:6px}
   <div class="legend">
     <div class="legend-item"><div class="legend-dot" style="background:#4fc3f7"></div>00631L</div>
     <div class="legend-item"><div class="legend-dot" style="background:#ff9800"></div>加碼部位</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#5c6bc0"></div>0050</div>
     <div class="legend-item"><div class="legend-dot" style="background:#a5d6a7"></div>00865B</div>
     <div class="legend-item"><div class="legend-dot" style="background:#ffd54f"></div>現金</div>
     <div class="legend-item"><div class="legend-dot-dash"></div>投入成本線</div>
@@ -302,11 +339,11 @@ canvas{display:block;width:100%;border-radius:6px}
 <p class="footer">🚀 雲端自動版：登入或開啟網頁時會全自動更新最新股價並上傳。</p>
 
 <script>
-var STORAGE_KEY='portfolio-v3';
+var STORAGE_KEY='portfolio-v4';
 var CONF_KEY='portfolio-sync-conf';
 var addOnEnabled=true;
 var addOnSource='cash';
-var price631val=40.2, priceBondval=48.15;
+var price631val=40.2, price50val=150.0, priceBondval=48.15;
 var isCloudSyncing=false;
 
 function fmt(v){
@@ -322,6 +359,7 @@ async function autoRefreshAllPrices() {
   try {
     await Promise.all([
       fetchPriceSilent('00631L.TW', 'price631', 'price631val', 'p631time', 'btn631'),
+      fetchPriceSilent('0050.TW', 'price0050', 'price50val', 'p50time', 'btn50'),
       fetchPriceSilent('00865B.TW', 'priceBond', 'priceBondval', 'p865time', 'btn865')
     ]);
   } catch(e) {}
@@ -340,7 +378,9 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
     var price = json.chart.result[0].meta.regularMarketPrice;
     if (price) {
       g(inputId).value = price;
-      if (varName === 'price631val') price631val = price; else priceBondval = price;
+      if (varName === 'price631val') price631val = price; 
+      else if (varName === 'price50val') price50val = price;
+      else priceBondval = price;
       var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
     }
   } catch (e) {
@@ -351,7 +391,9 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
       var priceAlt = jsonAlt.chart.result[0].meta.regularMarketPrice;
       if (priceAlt) {
         g(inputId).value = priceAlt;
-        if (varName === 'price631val') price631val = priceAlt; else priceBondval = priceAlt;
+        if (varName === 'price631val') price631val = priceAlt;
+        else if (varName === 'price50val') price50val = priceAlt;
+        else priceBondval = priceAlt;
         var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
       }
     } catch(err) {}
@@ -365,10 +407,12 @@ function val(id){ return parseFloat(g(id).value)||0; }
 function applyPrice(inputId, varName){
   var v=parseFloat(g(inputId).value);
   if(!isNaN(v)&&v>0){
-    if(varName==='price631val') price631val=v; else priceBondval=v;
+    if(varName==='price631val') price631val=v;
+    else if(varName==='price50val') price50val=v;
+    else priceBondval=v;
     updateAndSync();
   } else {
-    g(inputId).value = varName==='price631val' ? price631val : priceBondval;
+    g(inputId).value = (varName==='price631val') ? price631val : ((varName==='price50val') ? price50val : priceBondval);
   }
 }
 
@@ -394,8 +438,8 @@ function updatePresetActive(containerId,inputId,items,curVal){
 function updateSlider(id){
   var v=val(id);
   var labelMap={
-    'rate631':{el:'rate631Label',suffix:'%'}, 'rateBond':{el:'rateBondLabel',suffix:'%'},
-    'pct631':{el:'pct631Label',suffix:'%'}, 'pctBond':{el:'pctBondLabel',suffix:'%'},
+    'rate631':{el:'rate631Label',suffix:'%'}, 'rate50':{el:'rate50Label',suffix:'%'}, 'rateBond':{el:'rateBondLabel',suffix:'%'},
+    'pct631':{el:'pct631Label',suffix:'%'}, 'pct50':{el:'pct50Label',suffix:'%'}, 'pctBond':{el:'pctBondLabel',suffix:'%'},
     'addOnAmt':{el:'addOnAmtLabel',suffix:'萬'}, 'addOnDrop':{el:'addOnDropLabel',suffix:'%',prefix:'-'}, 'addOnYear':{el:'addOnYearLabel',suffix:'年'}
   };
   var m=labelMap[id];
@@ -429,61 +473,63 @@ function setSource(src){
 }
 
 function update(){
-  var shares=val('shares'), sharesBond=val('sharesBond');
+  var shares=val('shares'), shares0050=val('shares0050'), sharesBond=val('sharesBond');
   var cash=val('cash')*10000; var loan=val('loanAmount')*10000;
   var loanRate=parseFloat(g('loanRate').value)||3.5;
-  var rate631=val('rate631'), rateBond=val('rateBond');
-  var pct631=val('pct631'), pctBond=val('pctBond'); var pctCash=Math.max(0,100-pct631-pctBond);
+  var rate631=val('rate631'), rate50=val('rate50'), rateBond=val('rateBond');
+  var pct631=val('pct631'), pct50=val('pct50'), pctBond=val('pctBond'); var pctCash=Math.max(0,100-pct631-pct50-pctBond);
   var addOnAmt=val('addOnAmt')*10000; var addOnDrop=val('addOnDrop'), addOnYear=val('addOnYear');
 
-  var etf631Val=price631val*shares; var etfBondVal=priceBondval*sharesBond;
-  var totalAssets=etf631Val+etfBondVal+cash; var netAssets=totalAssets-loan;
+  var etf631Val=price631val*shares; var etf50Val=price50val*shares0050; var etfBondVal=priceBondval*sharesBond;
+  var totalAssets=etf631Val+etf50Val+etfBondVal+cash; var netAssets=totalAssets-loan;
 
-  g('val631').textContent=fmt(etf631Val); g('valBond').textContent=fmt(etfBondVal);
+  g('val631').textContent=fmt(etf631Val); g('val0050').textContent=fmt(etf50Val); g('valBond').textContent=fmt(etfBondVal);
   g('totalAssets').textContent=fmt(totalAssets);
-  g('assetBreakdown').textContent='631L '+fmt(etf631Val)+' + 865B '+fmt(etfBondVal)+' + 現金 '+fmt(cash);
+  g('assetBreakdown').textContent='631L '+fmt(etf631Val)+' + 0050 '+fmt(etf50Val)+' + 865B '+fmt(etfBondVal)+' + 現金 '+fmt(cash);
 
-  var init631=totalAssets*pct631/100; var initBond=totalAssets*pctBond/100; var initCash=totalAssets*pctCash/100;
-  var beta=(pct631/100*1.9+pctBond/100*0.05).toFixed(2);
+  var init631=totalAssets*pct631/100; var init50=totalAssets*pct50/100; var initBond=totalAssets*pctBond/100; var initCash=totalAssets*pctCash/100;
+  var beta=(pct631/100*1.9 + pct50/100*1.0 + pctBond/100*0.05).toFixed(2);
 
   g('cashPctInfo').textContent='現金自動：'+pctCash+'%（'+fmt(initCash)+'）';
   g('betaVal').textContent=beta; g('betaVal').style.color=beta>1.2?'#ff8a65':'#a5d6a7';
   g('betaType').textContent=beta>1.4?'積極型':beta>0.8?'穩健型':'保守型'; g('betaType').style.color=beta>1.4?'#ff8a65':'#a5d6a7';
 
   var r631Pct = totalAssets > 0 ? (etf631Val / totalAssets * 100) : 0;
+  var r50Pct = totalAssets > 0 ? (etf50Val / totalAssets * 100) : 0;
   var rBondPct = totalAssets > 0 ? (etfBondVal / totalAssets * 100) : 0;
   var rCashPct = totalAssets > 0 ? (cash / totalAssets * 100) : 0;
-  var realBeta = (r631Pct / 100 * 1.9 + rBondPct / 100 * 0.05).toFixed(2);
+  var realBeta = (r631Pct / 100 * 1.9 + r50Pct / 100 * 1.0 + rBondPct / 100 * 0.05).toFixed(2);
   
   g('realEffectiveBeta').textContent = `真實組合Beta: ${realBeta}`;
   
   var rBar = g('realAllocBar'); rBar.innerHTML = '';
-  [[r631Pct, '#4fc3f7'], [rBondPct, '#a5d6a7'], [rCashPct, '#ffd54f']].forEach(function(item, i){
+  [[r631Pct, '#4fc3f7'], [r50Pct, '#5c6bc0'], [rBondPct, '#a5d6a7'], [rCashPct, '#ffd54f']].forEach(function(item, i){
     if(item[0] > 0){
       var d = document.createElement('div'); d.style.flex = item[0]; d.style.background = item[1];
-      if(i === 0) d.style.borderRadius = '6px 0 0 6px'; if(i === 2) d.style.borderRadius = '0 6px 6px 0';
+      if(i === 0) d.style.borderRadius = '6px 0 0 6px'; if(i === 3) d.style.borderRadius = '0 6px 6px 0';
       rBar.appendChild(d);
     }
   });
   
   g('realAllocLabels').innerHTML = 
-    `<span style="color:#4fc3f7">00631L: ${r631Pct.toFixed(1)}%</span>` +
-    `<span style="color:#a5d6a7">00865B: ${rBondPct.toFixed(1)}%</span>` +
+    `<span style="color:#4fc3f7">00631L: ${r631Pct.toFixed(1)}%</span> ` +
+    `<span style="color:#5c6bc0">0050: ${r50Pct.toFixed(1)}%</span> ` +
+    `<span style="color:#a5d6a7">00865B: ${rBondPct.toFixed(1)}%</span> ` +
     `<span style="color:#ffd54f">現金: ${rCashPct.toFixed(1)}%</span>`;
 
   var triggerPrice=(price631val*(1-addOnDrop/100)).toFixed(2);
   var dl=g('dropLabel'); if(dl) dl.textContent='觸發跌幅（≈'+triggerPrice+'元）';
 
   var bar=g('allocBar'); bar.innerHTML='';
-  [[pct631,'#4fc3f7'],[pctBond,'#a5d6a7'],[pctCash,'#ffd54f']].forEach(function(item,i){
+  [[pct631,'#4fc3f7'],[pct50,'#5c6bc0'],[pctBond,'#a5d6a7'],[pctCash,'#ffd54f']].forEach(function(item,i){
     if(item[0]>0){
       var d=document.createElement('div'); d.style.flex=item[0]; d.style.background=item[1];
-      if(i===0) d.style.borderRadius='6px 0 0 6px'; if(i === 2) d.style.borderRadius='0 6px 6px 0';
+      if(i===0) d.style.borderRadius='6px 0 0 6px'; if(i === 3) d.style.borderRadius='0 6px 6px 0';
       bar.appendChild(d);
     }
   });
   var labels=g('allocLabels'); labels.innerHTML='';
-  [['00631L '+pct631+'%','#4fc3f7',init631],['00865B '+pctBond+'%','#a5d6a7',initBond],['現金 '+pctCash+'%','#ffd54f',initCash]].forEach(function(x){
+  [['00631L '+pct631+'%','#4fc3f7',init631],['0050 '+pct50+'%','#5c6bc0',init50],['00865B '+pctBond+'%','#a5d6a7',initBond],['現金 '+pctCash+'%','#ffd54f',initCash]].forEach(function(x){
     labels.innerHTML+='<span style="color:'+x[1]+'">'+x[0]+' <span style="color:#78909c">('+fmt(x[2])+')</span></span>';
   });
 
@@ -517,12 +563,13 @@ function update(){
 
   var chartData=[];
   for(var i=0;i<=10;i++){
-    var v631=init631*Math.pow(1+rate631/100,i); var vBond=initBond*Math.pow(1+rateBond/100,i);
+    var v631=init631*Math.pow(1+rate631/100,i); 
+    var v50=init50*Math.pow(1+rate50/100,i); 
+    var vBond=initBond*Math.pow(1+rateBond/100,i);
     var cashAfter=addOnEnabled&&addOnSource=='cash'?Math.max(0,initCash-addOnAmt):initCash;
     var vCash=addOnEnabled&&addOnSource=='cash'&&i>=addOnYear?cashAfter:initCash;
     var vAdd=addOnEnabled&&i>=addOnYear?addOnAmt*Math.pow(1+rate631/100,i-addOnYear):0;
-    var totalBase=init631*Math.pow(1+rate631/100,i)+initBond*Math.pow(1+rateBond/100,i)+initCash;
-    chartData.push({year:i,v631:Math.round(v631),vAdd:Math.round(vAdd),vBond:Math.round(vBond),vCash:Math.round(vCash),total:Math.round(v631+vBond+vCash+vAdd),totalBase:Math.round(totalBase)});
+    chartData.push({year:i, v631:Math.round(v631), vAdd:Math.round(vAdd), v50:Math.round(v50), vBond:Math.round(vBond), vCash:Math.round(vCash), total:Math.round(v631+vAdd+v50+vBond+vCash)});
   }
   drawChart(chartData, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOnYear);
 
@@ -530,28 +577,32 @@ function update(){
   var totalCost=totalAssets+(addOnEnabled&&addOnSource=='new'?addOnAmt:0);
   
   var cards=[
-    {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:'#81d4fa',detail:'不加碼對照 '+fmt(five.totalBase)},
-    {label:'十年後（含加碼）',val:fmt(final.total),sub:'+'+fmt(final.total-totalCost),color:'#ce93d8',detail:addOnEnabled?'加碼效益 +'+fmt(final.total-final.totalBase):'00631L '+fmt(final.v631)},
-    {label:'組合 Beta',val:beta,sub:beta>1.4?'積極型':'穩健型',color:'#a5d6a7',detail:'00631L×1.9＋00865B×0.05'}
+    {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:'#81d4fa',detail:'複利滾動中'},
+    {label:'十年後（含加碼）',val:fmt(final.total),sub:'+'+fmt(final.total-totalCost),color:'#ce93d8',detail:'長期複利成效'},
+    {label:'組合 Beta',val:beta,sub:beta>1.2?'積極型':'穩健型',color:'#a5d6a7',detail:'00631L×1.9＋0050×1.0＋00865B×0.05'}
   ];
   var rc=g('resultCards'); rc.innerHTML='';
   cards.forEach(function(c){
     rc.innerHTML+='<div class="stat-card" style="background:'+c.color+'11;border:1px solid '+c.color+'33"><div class="stat-label">'+c.label+'</div><div class="stat-val">'+c.val+'</div><div class="stat-sub">'+c.sub+'</div><div class="stat-detail">'+c.detail+'</div></div>';
   });
 
-  var stockExp=etf631Val+etfBondVal; var stockExpPct=(stockExp/totalAssets*100).toFixed(1);
-  var e631Pct=(etf631Val/totalAssets*100).toFixed(1), eBondPct=(etfBondVal/totalAssets*100).toFixed(1), eCashPct=(cash/totalAssets*100).toFixed(1);
+  var stockExp=etf631Val+etf50Val+etfBondVal; var stockExpPct=(stockExp/totalAssets*100).toFixed(1);
+  var e631Pct=(etf631Val/totalAssets*100).toFixed(1), e50Pct=(etf50Val/totalAssets*100).toFixed(1), eBondPct=(etfBondVal/totalAssets*100).toFixed(1), eCashPct=(cash/totalAssets*100).toFixed(1);
 
   var eb=g('expBar'); eb.innerHTML='';
-  [[parseFloat(e631Pct),'#4fc3f7'],[parseFloat(eBondPct),'#a5d6a7'],[parseFloat(eCashPct),'#ffd54f']].forEach(function(x,i){
+  [[parseFloat(e631Pct),'#4fc3f7'],[parseFloat(e50Pct),'#5c6bc0'],[parseFloat(eBondPct),'#a5d6a7'],[parseFloat(eCashPct),'#ffd54f']].forEach(function(x,i){
     if(x[0]>0){
       var d=document.createElement('div'); d.style.flex=x[0]; d.style.background=x[1];
-      if(i===0) d.style.borderRadius='6px 0 0 6px'; if(i===2) d.style.borderRadius='0 6px 6px 0';
+      if(i===0) d.style.borderRadius='6px 0 0 6px'; if(i===3) d.style.borderRadius='0 6px 6px 0';
       eb.appendChild(d);
     }
   });
   var ec=g('expCards'); ec.innerHTML='';
-  [['00631L（2x槓桿）',e631Pct,etf631Val,'#4fc3f7','高風險'],['00865B（債券）',eBondPct,etfBondVal,'#a5d6a7','低風險'],['現金',eCashPct,cash,'#ffd54f','零風險']].forEach(function(x){
+  [
+    ['00631L（2x槓桿）',e631Pct,etf631Val,'#4fc3f7'],
+    ['0050（大盤權值）',e50Pct,etf50Val,'#5c6bc0'],
+    ['00865B（債券）',eBondPct,etfBondVal,'#a5d6a7']
+  ].forEach(function(x){
     ec.innerHTML+='<div class="stat-card" style="background:'+x[3]+'11;border:1px solid '+x[3]+'33"><div class="stat-label">'+x[0]+'</div><div style="font-size:18px;font-weight:800;color:'+x[3]+'">'+x[1]+'%</div><div style="font-size:10px;color:#546e7a">'+fmt(x[2])+'</div></div>';
   });
 
@@ -572,12 +623,11 @@ function update(){
 
   var lc=g('lossCards'); lc.innerHTML='';
   [{label:'市場跌 -20%',drop:0.20},{label:'市場跌 -30%',drop:0.30},{label:'市場跌 -50%',drop:0.50}].forEach(function(s){
-    var loss631=etf631Val*s.drop*1.9, lossBond=etfBondVal*s.drop*0.05; var total=loss631+lossBond; var pct=(total/totalAssets*100).toFixed(1);
+    var loss631=etf631Val*s.drop*1.9, loss50=etf50Val*s.drop*1.0, lossBond=etfBondVal*s.drop*0.05; var total=loss631+loss50+lossBond; var pct=(total/totalAssets*100).toFixed(1);
     lc.innerHTML+='<div class="stat-card" style="background:rgba(239,83,80,0.08);border:1px solid rgba(239,83,80,0.2)"><div style="font-size:10px;color:#ef9a9a;font-weight:700;margin-bottom:4px">'+s.label+'</div><div style="font-size:16px;font-weight:800;color:#fff">-'+fmt(total)+'</div><div style="font-size:10px;color:#ef5350;margin:2px 0">-'+pct+'%</div></div>';
   });
 }
 
-// 核心重構：讓 Y 軸刻度自動對齊「漂亮整數」，並將背景橫格線全面換成白色實線
 function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOnYear){
   var canvas=g('chart'); if(!canvas) return;
   var W=canvas.offsetWidth||canvas.parentElement.offsetWidth||320;
@@ -587,20 +637,17 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
   var pad={top:25,right:20,bottom:30,left:110};
   var cw=canvas.width-pad.left-pad.right; var ch=canvas.height-pad.top-pad.bottom;
   
-  // 找出數據中的最大值
   var rawMax=0; data.forEach(function(d){ if(d.total>rawMax) rawMax=d.total; });
   
-  // 【新邏輯】計算精準、漂亮的整數 Y 軸刻度跳躍距 (Step)
   var rawStep = rawMax / 4;
-  var step = 100000; // 預設最小從 10 萬起跳
-  if (rawStep > 10000000) step = 10000000;     // 大於一千萬則以「千萬」整數跳格
-  else if (rawStep > 5000000) step = 5000000;   // 五百萬跳格
-  else if (rawStep > 2000000) step = 2000000;   // 二百萬跳格
-  else if (rawStep > 1000000) step = 1000000;   // 一百萬跳格
-  else if (rawStep > 500000) step = 500000;     // 五十萬跳格
-  else if (rawStep > 200000) step = 200000;     // 二十萬跳格
+  var step = 100000;
+  if (rawStep > 10000000) step = 10000000;
+  else if (rawStep > 5000000) step = 5000000;
+  else if (rawStep > 2000000) step = 2000000;
+  else if (rawStep > 1000000) step = 1000000;
+  else if (rawStep > 500000) step = 500000;
+  else if (rawStep > 200000) step = 200000;
 
-  // 根據找到的漂亮整數步長，重新向上校正圖表天花板最大值
   var maxVal = Math.ceil(rawMax / step) * step;
   if (maxVal === 0) maxVal = step * 4;
 
@@ -608,16 +655,12 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
   
   ctx.clearRect(0,0,canvas.width,canvas.height);
   
-  // 【新視覺】將橫格線全面改為高對比度的「白色線」（帶淡淡透明度，避免干擾主要區塊）
   ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=1;
   for(var i=0; i<=4; i++){
     var curTickVal = (maxVal / 4) * (4 - i);
     var y = pad.top + i * (ch / 4);
-    
     ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(pad.left+cw,y); ctx.stroke();
-    
     ctx.fillStyle='#90a4ae'; ctx.font='20px -apple-system,sans-serif'; ctx.textAlign='right'; 
-    // 現在輸出的 Y 軸數字保證是 2百萬、4百萬 等完美整數，不再有小數點了！
     ctx.fillText(fmt(curTickVal),pad.left-10,y+6);
   }
 
@@ -628,7 +671,8 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
     ctx.fillText('第'+i+'年', xPos(i), canvas.height - 6);
   }
   
-  var layers=[{key:'v631',color:'#4fc3f7'},{key:'vAdd',color:'#ff9800'},{key:'vBond',color:'#a5d6a7'},{key:'vCash',color:'#ffd54f'}];
+  // 堆疊彩色層加入 0050：v631 -> vAdd -> v50 -> vBond -> vCash
+  var layers=[{key:'v631',color:'#4fc3f7'},{key:'vAdd',color:'#ff9800'},{key:'v50',color:'#5c6bc0'},{key:'vBond',color:'#a5d6a7'},{key:'vCash',color:'#ffd54f'}];
   layers.forEach(function(layer){
     ctx.beginPath();
     data.forEach(function(d,i){
@@ -683,6 +727,7 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
 }
 
 function fetchPrice631(){ fetchPriceSilent('00631L.TW','price631','price631val','p631time','btn631').then(updateAndSync); }
+function fetchPrice0050(){ fetchPriceSilent('0050.TW','price0050','price50val','p50time','btn50').then(updateAndSync); }
 function fetchPriceBond(){ fetchPriceSilent('00865B.TW','priceBond','priceBondval','p865time','btn865').then(updateAndSync); }
 
 function showMsg(id, text, ms){ var el=g(id); el.textContent=text; setTimeout(function(){ el.textContent=''; }, ms||3000); }
@@ -741,8 +786,8 @@ async function loadFromCloud() {
 
 function getSettings(){
   return {
-    shares:val('shares'), price631:price631val, sharesBond:val('sharesBond'), priceBond:priceBondval,
-    cash:val('cash'), rate631:val('rate631'), rateBond:val('rateBond'), pct631:val('pct631'), pctBond:val('pctBond'),
+    shares:val('shares'), price631:price631val, shares0050:val('shares0050'), price0050:price50val, sharesBond:val('sharesBond'), priceBond:priceBondval,
+    cash:val('cash'), rate631:val('rate631'), rate50:val('rate50'), rateBond:val('rateBond'), pct631:val('pct631'), pct50:val('pct50'), pctBond:val('pctBond'),
     addOnEnabled:addOnEnabled, addOnSource:addOnSource, addOnAmt:val('addOnAmt'), addOnDrop:val('addOnDrop'), addOnYear:val('addOnYear'),
     loanAmount:val('loanAmount'), loanRate:parseFloat(g('loanRate').value)||3.5, loanStart:g('loanStart').value, loanTotalMonths:val('loanTotalMonths')||84,
   };
@@ -752,12 +797,16 @@ function applySettings(s){
   if(!s) return;
   if(s.shares!=null) g('shares').value=s.shares;
   if(s.price631!=null){ price631val=s.price631; g('price631').value=s.price631; }
+  if(s.shares0050!=null) g('shares0050').value=s.shares0050;
+  if(s.price0050!=null){ price50val=s.price0050; g('price0050').value=s.price0050; }
   if(s.sharesBond!=null) g('sharesBond').value=s.sharesBond;
   if(s.priceBond!=null){ priceBondval=s.priceBond; g('priceBond').value=s.priceBond; }
   if(s.cash!=null) g('cash').value=s.cash;
   if(s.rate631!=null){ g('rate631').value=s.rate631; g('rate631Label').textContent=s.rate631+'%'; }
+  if(s.rate50!=null){ g('rate50').value=s.rate50; g('rate50Label').textContent=s.rate50+'%'; }
   if(s.rateBond!=null){ g('rateBond').value=s.rateBond; g('rateBondLabel').textContent=s.rateBond+'%'; }
   if(s.pct631!=null){ g('pct631').value=s.pct631; g('pct631Label').textContent=s.pct631+'%'; }
+  if(s.pct50!=null){ g('pct50').value=s.pct50; g('pct50Label').textContent=s.pct50+'%'; }
   if(s.pctBond!=null){ g('pctBond').value=s.pctBond; g('pctBondLabel').textContent=s.pctBond+'%'; }
   if(s.addOnEnabled!=null && s.addOnEnabled!==addOnEnabled) toggleAddOn();
   if(s.addOnSource!=null) setSource(s.addOnSource);
@@ -772,9 +821,12 @@ function applySettings(s){
 }
 
 makePresets('rate631Presets','rate631',[{label:'10%',val:10},{label:'13%',val:13},{label:'14%',val:14},{label:'16%',val:16}],'%',true);
+makePresets('rate50Presets','rate50',[{label:'7%',val:7},{label:'9%',val:9},{label:'11%',val:11}],'%',true);
 makePresets('rateBondPresets','rateBond',[{label:'3%',val:3},{label:'4.5%',val:4.5},{label:'6%',val:6}],'%',true);
-makePresets('pct631Presets','pct631',[{label:'40%',val:40},{label:'50%',val:50},{label:'60%',val:60}],'%',true);
-makePresets('pctBondPresets','pctBond',[{label:'15%',val:15},{label:'25%',val:25},{label:'30%',val:30}],'%',true);
+
+makePresets('pct631Presets','pct631',[{label:'30%',val:30},{label:'40%',val:40},{label:'50%',val:50}],'%',true);
+makePresets('pct50Presets','pct50',[{label:'10%',val:10},{label:'20%',val:20},{label:'30%',val:30}],'%',true);
+makePresets('pctBondPresets','pctBond',[{label:'15%',val:15},{label:'20%',val:20},{label:'30%',val:30}],'%',true);
 
 makePresets('addOnAmtPresets','addOnAmt',[
   {label:'10萬',val:10},
