@@ -96,11 +96,11 @@ canvas{display:block;width:100%;border-radius:6px}
     </div>
   </div>
 
-  <!-- 新增：0050 -->
+  <!-- 0050：預設值已修正為 5000 股 -->
   <div class="grid2" style="margin-bottom:10px">
     <div>
       <label>0050 持股數</label>
-      <input type="number" id="shares0050" value="10000" oninput="updateAndSync()">
+      <input type="number" id="shares0050" value="5000" oninput="updateAndSync()">
     </div>
     <div>
       <label>0050 股價 <span id="p50time" style="color:#4caf50;font-size:9px"></span></label>
@@ -155,29 +155,29 @@ canvas{display:block;width:100%;border-radius:6px}
   </div>
 </div>
 
-<!-- 借款設定 -->
+<!-- 借款設定：預設值已修正為金額 155萬、利率 4.23%、啟始 2026-06、期數 60期 -->
 <div class="card card-orange">
   <p class="section-title" style="color:#ffb74d">🏦 信貸借款設定</p>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
     <div>
       <label>借款金額（萬元）</label>
       <div style="display:flex;align-items:center;gap:4px">
-        <input type="number" id="loanAmount" value="0" oninput="updateAndSync()" style="color:#ffb74d">
+        <input type="number" id="loanAmount" value="155" oninput="updateAndSync()" style="color:#ffb74d">
         <span style="font-size:11px;color:#78909c;flex-shrink:0">萬</span>
       </div>
     </div>
     <div>
       <label>年利率（%）</label>
-      <input type="text" id="loanRate" value="3.5" onblur="updateAndSync()" style="color:#ffb74d">
+      <input type="text" id="loanRate" value="4.23" onblur="updateAndSync()" style="color:#ffb74d">
       <div class="presets" id="loanRatePresets"></div>
     </div>
     <div>
       <label>貸款開始日期</label>
-      <input type="text" id="loanStart" value="2024-01" placeholder="YYYY-MM" onblur="updateAndSync()" style="color:#ffb74d">
+      <input type="text" id="loanStart" value="2026-06" placeholder="YYYY-MM" onblur="updateAndSync()" style="color:#ffb74d">
     </div>
     <div>
       <label>貸款總期數（月）</label>
-      <input type="number" id="loanTotalMonths" value="84" min="12" max="360" oninput="updateAndSync()" style="color:#ffb74d">
+      <input type="number" id="loanTotalMonths" value="60" min="12" max="360" oninput="updateAndSync()" style="color:#ffb74d">
       <div class="presets" id="loanMonthsPresets"></div>
     </div>
     <div id="loanSummary" style="font-size:10px;color:#546e7a;display:flex;flex-direction:column;justify-content:center;gap:4px"></div>
@@ -265,7 +265,7 @@ canvas{display:block;width:100%;border-radius:6px}
     <div style="flex:1">
       <div style="font-size:10px;color:#546e7a;margin-bottom:5px">模擬再平衡分佈</div>
       <div class="bar-container" id="allocBar"></div>
-      <div id="allocLabels" style="display:flex;gap:10px;font-size:10px;flex-wrap:wrap}</div>
+      <div id="allocLabels" style="display:flex;gap:10px;font-size:10px;flex-wrap:wrap"></div>
     </div>
     <div style="text-align:right;margin-left:12px">
       <div style="font-size:10px;color:#546e7a">模擬組合Beta</div>
@@ -359,7 +359,6 @@ async function autoRefreshAllPrices() {
   try {
     await Promise.all([
       fetchPriceSilent('00631L.TW', 'price631', 'price631val', 'p631time', 'btn631'),
-      fetchPriceSilent('0050.TW', 'price0050', 'price50val', 'p50time', 'btn50'),
       fetchPriceSilent('00865B.TW', 'priceBond', 'priceBondval', 'p865time', 'btn865')
     ]);
   } catch(e) {}
@@ -378,9 +377,7 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
     var price = json.chart.result[0].meta.regularMarketPrice;
     if (price) {
       g(inputId).value = price;
-      if (varName === 'price631val') price631val = price; 
-      else if (varName === 'price50val') price50val = price;
-      else priceBondval = price;
+      if (varName === 'price631val') price631val = price; else priceBondval = price;
       var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
     }
   } catch (e) {
@@ -391,9 +388,7 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
       var priceAlt = jsonAlt.chart.result[0].meta.regularMarketPrice;
       if (priceAlt) {
         g(inputId).value = priceAlt;
-        if (varName === 'price631val') price631val = priceAlt;
-        else if (varName === 'price50val') price50val = priceAlt;
-        else priceBondval = priceAlt;
+        if (varName === 'price631val') price631val = priceAlt; else priceBondval = priceAlt;
         var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
       }
     } catch(err) {}
@@ -407,12 +402,10 @@ function val(id){ return parseFloat(g(id).value)||0; }
 function applyPrice(inputId, varName){
   var v=parseFloat(g(inputId).value);
   if(!isNaN(v)&&v>0){
-    if(varName==='price631val') price631val=v;
-    else if(varName==='price50val') price50val=v;
-    else priceBondval=v;
+    if(varName==='price631val') price631val=v; else priceBondval=v;
     updateAndSync();
   } else {
-    g(inputId).value = (varName==='price631val') ? price631val : ((varName==='price50val') ? price50val : priceBondval);
+    g(inputId).value = varName==='price631val' ? price631val : priceBondval;
   }
 }
 
@@ -438,8 +431,8 @@ function updatePresetActive(containerId,inputId,items,curVal){
 function updateSlider(id){
   var v=val(id);
   var labelMap={
-    'rate631':{el:'rate631Label',suffix:'%'}, 'rate50':{el:'rate50Label',suffix:'%'}, 'rateBond':{el:'rateBondLabel',suffix:'%'},
-    'pct631':{el:'pct631Label',suffix:'%'}, 'pct50':{el:'pct50Label',suffix:'%'}, 'pctBond':{el:'pctBondLabel',suffix:'%'},
+    'rate631':{el:'rate631Label',suffix:'%'}, 'rateBond':{el:'rateBondLabel',suffix:'%'},
+    'pct631':{el:'pct631Label',suffix:'%'}, 'pctBond':{el:'pctBondLabel',suffix:'%'},
     'addOnAmt':{el:'addOnAmtLabel',suffix:'萬'}, 'addOnDrop':{el:'addOnDropLabel',suffix:'%',prefix:'-'}, 'addOnYear':{el:'addOnYearLabel',suffix:'年'}
   };
   var m=labelMap[id];
@@ -671,7 +664,6 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
     ctx.fillText('第'+i+'年', xPos(i), canvas.height - 6);
   }
   
-  // 堆疊彩色層加入 0050：v631 -> vAdd -> v50 -> vBond -> vCash
   var layers=[{key:'v631',color:'#4fc3f7'},{key:'vAdd',color:'#ff9800'},{key:'v50',color:'#5c6bc0'},{key:'vBond',color:'#a5d6a7'},{key:'vCash',color:'#ffd54f'}];
   layers.forEach(function(layer){
     ctx.beginPath();
