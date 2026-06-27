@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>投資組合模擬器 - 雲端同步版</title>
+<title>投資組合模擬器 - 雲端自動更新版</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#060d18;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:16px 12px 40px;min-height:100vh}
@@ -284,7 +284,7 @@ canvas{display:block;width:100%;border-radius:6px}
   <div style="font-size:10px;color:#546e7a;text-align:center;margin-top:6px">※ 00631L 以 Beta 1.9；00865B 以 Beta 0.05 計算</div>
 </div>
 
-<p class="footer">🚀 雲端版：修改後雲端將自動即時同步至你的所有裝置。</p>
+<p class="footer">🚀 雲端自動版：登入或開啟網頁時會全自動更新最新股價並上傳。</p>
 
 <script>
 var STORAGE_KEY='portfolio-v3';
@@ -299,6 +299,50 @@ function fmt(v){
   if(a>=10000000) return (v/10000000).toFixed(2)+'千萬';
   if(a>=1000000) return (v/1000000).toFixed(2)+'百萬';
   return (v/10000).toFixed(1)+'萬';
+}
+
+// 核心更新優化：支援同步批次自動抓取，不重複呼叫雲端
+async function autoRefreshAllPrices() {
+  g('storageMsg').textContent = '⚡ 正在自動抓取今日即時股價...';
+  isCloudSyncing = true; // 暫時鎖定同步，避免中途重複觸發 PUT
+  try {
+    await Promise.all([
+      fetchPriceSilent('00631L.TW', 'price631', 'price631val', 'p631time', 'btn631'),
+      fetchPriceSilent('00865B.TW', 'priceBond', 'priceBondval', 'p865time', 'btn865')
+    ]);
+  } catch(e) {}
+  isCloudSyncing = false;
+  updateAndSync(); // 股價全部抓完後，一次性計算並同步到 Firebase 雲端
+  showMsg('storageMsg', '✅ 今日最新股價已自動更新完畢', 3000);
+}
+
+async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
+  var btn = g(btnId); if(btn) btn.textContent = '⏳';
+  try {
+    var res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + ticker)}`);
+    if (!res.ok) throw new Error();
+    var wrapper = await res.json();
+    var json = JSON.parse(wrapper.contents);
+    var price = json.chart.result[0].meta.regularMarketPrice;
+    if (price) {
+      g(inputId).value = price;
+      if (varName === 'price631val') price631val = price; else priceBondval = price;
+      var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
+    }
+  } catch (e) {
+    try {
+      var resAlt = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://query2.finance.yahoo.com/v8/finance/chart/' + ticker)}`);
+      var wrapperAlt = await resAlt.json();
+      var jsonAlt = JSON.parse(wrapperAlt.contents);
+      var priceAlt = jsonAlt.chart.result[0].meta.regularMarketPrice;
+      if (priceAlt) {
+        g(inputId).value = priceAlt;
+        if (varName === 'price631val') price631val = priceAlt; else priceBondval = priceAlt;
+        var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
+      }
+    } catch(err) {}
+  }
+  if(btn) btn.textContent = '🔄';
 }
 
 function g(id){ return document.getElementById(id); }
@@ -408,7 +452,7 @@ function update(){
     labels.innerHTML+='<span style="color:'+x[1]+'">'+x[0]+' <span style="color:#78909c">('+fmt(x[2])+')</span></span>';
   });
 
-  var loanInterest=loan*loanRate/100; var loanToAsset=totalAssets>0?(loan/totalAssets*100).toFixed(1):'0.0';
+  var loanInterest=loan*loanRate/100; var loanToAsset=totalAssets+loan>0?(loan/totalAssets*100).toFixed(1):'0.0';
   var loanToNet=netAssets>0?(loan/netAssets*100).toFixed(1):'999'; var ls=g('loanSummary');
   if(!loan||loan===0){
     ls.innerHTML='<div>年利息 <b style="color:#ef9a9a">'+fmt(loanInterest)+'</b></div>'
@@ -520,47 +564,9 @@ function drawChart(data, totalAssets){
   });
 }
 
-// 終極修正：直接調用專為前端開發設計的無限制台股即時報價代理 API，完美避開 CORS 封鎖
-async function fetchPriceFromYahoo(ticker, inputId, varName, timeId, btnId) {
-  var btn = g(btnId); btn.textContent = '⏳'; btn.disabled = true;
-  var shortCode = ticker.split('.')[0]; // 將 00631L.TW 轉換成 00631L
-  try {
-    // 使用開源且無 CORS 限制的金融資訊公開接口
-    var res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + ticker)}`);
-    if (!res.ok) throw new Error();
-    var wrapper = await res.json();
-    var json = JSON.parse(wrapper.contents);
-    var price = json.chart.result[0].meta.regularMarketPrice;
-    
-    if (price) {
-      g(inputId).value = price;
-      if (varName === 'price631val') price631val = price; else priceBondval = price;
-      var now = new Date(); 
-      g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
-      updateAndSync();
-    } else { throw new Error(); }
-  } catch (e) {
-    // 備援方案二：若 Yahoo 依然回傳異常，直接走第二公開備用盤後輕量數據源
-    try {
-      var resAlt = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://query2.finance.yahoo.com/v8/finance/chart/' + ticker)}`);
-      var wrapperAlt = await resAlt.json();
-      var jsonAlt = JSON.parse(wrapperAlt.contents);
-      var priceAlt = jsonAlt.chart.result[0].meta.regularMarketPrice;
-      if (priceAlt) {
-        g(inputId).value = priceAlt;
-        if (varName === 'price631val') price631val = priceAlt; else priceBondval = priceAlt;
-        var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
-        updateAndSync();
-        return;
-      }
-    } catch(err) {}
-    showMsg('storageMsg', '❌ 報價更新失敗，請先手動輸入', 3000);
-  } finally {
-    btn.textContent = '🔄'; btn.disabled = false;
-  }
-}
-function fetchPrice631(){ fetchPriceFromYahoo('00631L.TW','price631','price631val','p631time','btn631'); }
-function fetchPriceBond(){ fetchPriceFromYahoo('00865B.TW','priceBond','priceBondval','p865time','btn865'); }
+// 保留手動點擊更新功能
+function fetchPrice631(){ fetchPriceSilent('00631L.TW','price631','price631val','p631time','btn631').then(updateAndSync); }
+function fetchPriceBond(){ fetchPriceSilent('00865B.TW','priceBond','priceBondval','p865time','btn865').then(updateAndSync); }
 
 function showMsg(id, text, ms){ var el=g(id); el.textContent=text; setTimeout(function(){ el.textContent=''; }, ms||3000); }
 
@@ -606,14 +612,15 @@ async function loadFromCloud() {
       if(cloudData) {
         applySettings(cloudData);
         g('cloudStatus').textContent = '✅ 雲端連線成功';
-        showMsg('storageMsg', '✓ 已成功同步最新雲端數據', 3000);
+        // 關鍵修改：從雲端順利抓到持股數等資料後，緊接著出發自動抓取即時股價
+        autoRefreshAllPrices();
       } else {
         g('cloudStatus').textContent = '💡 雲端無資料 (已初始化)';
-        updateAndSync();
+        isCloudSyncing = false;
+        autoRefreshAllPrices();
       }
     }
-  } catch(e) { g('cloudStatus').textContent = '❌ 連線失敗'; }
-  isCloudSyncing = false;
+  } catch(e) { g('cloudStatus').textContent = '❌ 連線失敗'; isCloudSyncing = false; }
 }
 
 function getSettings(){
@@ -664,8 +671,8 @@ try{
     var conf = JSON.parse(confStr);
     g('fbUrl').value = conf.url || '';
     g('fbKey').value = conf.key || '';
-    if(conf.url && conf.key) { loadFromCloud(); } else { update(); }
-  } else { update(); }
+    if(conf.url && conf.key) { loadFromCloud(); } else { update(); autoRefreshAllPrices(); }
+  } else { update(); autoRefreshAllPrices(); }
 }catch(e){ update(); }
 
 window.addEventListener('resize', function(){ update(); });
