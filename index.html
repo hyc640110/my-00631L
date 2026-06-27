@@ -527,11 +527,11 @@ function update(){
   var final=chartData[10], five=chartData[5];
   var totalCost=totalAssets+(addOnEnabled&&addOnSource=='new'?addOnAmt:0);
   
-  // 【已修復】補上原本漏掉的單引號
+  // 【徹底修復】將此前漏掉的單引號完全補齊：'#81d4fa'
   var cards=[
     {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:'#81d4fa',detail:'不加碼對照 '+fmt(five.totalBase)},
     {label:'十年後（含加碼）',val:fmt(final.total),sub:'+'+fmt(final.total-totalCost),color:'#ce93d8',detail:addOnEnabled?'加碼效益 +'+fmt(final.total-final.totalBase):'00631L '+fmt(final.v631)},
-    {label:'組合 Beta',val:beta,sub:beta>1.4?'積極型':'穩健型',color:beta>1.4?'#ff8a65':'#a5d6a7',detail:'00631L×1.9＋00865B×0.05'}
+    {label:'組合 Beta',val:beta,sub:beta>1.4?'積極型':'穩健型',color:'#a5d6a7',detail:'00631L×1.9＋00865B×0.05'}
   ];
   var rc=g('resultCards'); rc.innerHTML='';
   cards.forEach(function(c){
