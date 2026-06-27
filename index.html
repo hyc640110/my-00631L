@@ -291,7 +291,7 @@ canvas{display:block;width:100%;border-radius:6px}
   </div>
 </div>
 
-<!-- 結果卡片欄位（順序已對調：五年放前面，十年放後面） -->
+<!-- 結果卡片欄位 -->
 <div class="grid3" style="max-width:640px;margin:0 auto 12px" id="resultCards"></div>
 
 <p class="footer">🚀 雲端自動版：登入或開啟網頁時會全自動更新最新股價並上傳。</p>
@@ -473,7 +473,7 @@ function update(){
   [[pct631,'#4fc3f7'],[pctBond,'#a5d6a7'],[pctCash,'#ffd54f']].forEach(function(item,i){
     if(item[0]>0){
       var d=document.createElement('div'); d.style.flex=item[0]; d.style.background=item[1];
-      if(i===0) d.style.borderRadius='6px 0 0 6px'; if(i===2) d.style.borderRadius='0 6px 6px 0';
+      if(i===0) d.style.borderRadius='6px 0 0 6px'; if(i === 2) d.style.borderRadius='0 6px 6px 0';
       bar.appendChild(d);
     }
   });
@@ -524,7 +524,6 @@ function update(){
   var final=chartData[10], five=chartData[5];
   var totalCost=totalAssets+(addOnEnabled&&addOnSource=='new'?addOnAmt:0);
   
-  // 修正對調邏輯：重新排列陣列順序，將「五年後」移動至第一位
   var cards=[
     {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:'#81d4fa',detail:'不加碼對照 '+fmt(five.totalBase)},
     {label:'十年後（含加碼）',val:fmt(final.total),sub:'+'+fmt(final.total-totalCost),color:'#ce93d8',detail:addOnEnabled?'加碼效益 +'+fmt(final.total-final.totalBase):'00631L '+fmt(final.v631)},
@@ -690,7 +689,18 @@ makePresets('rate631Presets','rate631',[{label:'10%',val:10},{label:'13%',val:13
 makePresets('rateBondPresets','rateBond',[{label:'3%',val:3},{label:'4.5%',val:4.5},{label:'6%',val:6}],'%',true);
 makePresets('pct631Presets','pct631',[{label:'40%',val:40},{label:'50%',val:50},{label:'60%',val:60}],'%',true);
 makePresets('pctBondPresets','pctBond',[{label:'15%',val:15},{label:'25%',val:25},{label:'30%',val:30}],'%',true);
-makePresets('addOnAmtPresets','addOnAmt',[{label:'10萬',val:1},{label:'30萬',val:3},{label:'50萬',val:5}],'萬',true);
+
+// 修正與擴充：完美對應滑桿單位，精確生成 1萬 到 20萬 的按鈕
+makePresets('addOnAmtPresets','addOnAmt',[
+  {label:'1萬',val:1},
+  {label:'3萬',val:3},
+  {label:'5萬',val:5},
+  {label:'8萬',val:8},
+  {label:'10萬',val:10},
+  {label:'15萬',val:15},
+  {label:'20萬',val:20}
+],'萬',true);
+
 makePresets('addOnDropPresets','addOnDrop',[{label:'-15%',val:15},{label:'-25%',val:25},{label:'-35%',val:35}],'%',true);
 makePresets('addOnYearPresets','addOnYear',[{label:'第2年',val:2},{label:'第5年',val:5},{label:'第8年',val:8}],'年',true);
 makePresets('loanRatePresets','loanRate',[{label:'2.5%',val:2.5},{label:'3%',val:3},{label:'3.5%',val:3.5},{label:'4%',val:4}],'%',false);
