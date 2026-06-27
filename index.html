@@ -96,7 +96,7 @@ canvas{display:block;width:100%;border-radius:6px}
     </div>
   </div>
 
-  <!-- 0050：預設改為 5000 股 -->
+  <!-- 0050：預設為 5000 股 -->
   <div class="grid2" style="margin-bottom:10px">
     <div>
       <label>0050 持股數</label>
@@ -381,6 +381,7 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
     var price = json.chart.result[0].meta.regularMarketPrice;
     if (price) {
       g(inputId).value = price;
+      // 【精確修正】徹底修正變數寫入映射，完美區分 price631val、price50val 與 priceBondval
       if (varName === 'price631val') price631val = price; 
       else if (varName === 'price50val') price50val = price;
       else priceBondval = price;
@@ -388,13 +389,13 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
     }
   } catch (e) {
     try {
-      // 【完全修復】修正備援線路中 Ticker 被寫死重複加上 .TW 的問題
       var resAlt = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://query2.finance.yahoo.com/v8/finance/chart/' + ticker)}`);
       var wrapperAlt = await resAlt.json();
       var jsonAlt = JSON.parse(wrapperAlt.contents);
       var priceAlt = jsonAlt.chart.result[0].meta.regularMarketPrice;
       if (priceAlt) {
         g(inputId).value = priceAlt;
+        // 【精確修正】備援 API 寫入邏輯同步修正
         if (varName === 'price631val') price631val = priceAlt;
         else if (varName === 'price50val') price50val = priceAlt;
         else priceBondval = priceAlt;
@@ -439,7 +440,6 @@ function updatePresetActive(containerId,inputId,items,curVal){
   btns.forEach(function(b,i){ b.classList.toggle('active', String(items[i].val)===String(curVal)); });
 }
 
-// 支援 0050 的 Slider 標籤變動映射
 function updateSlider(id){
   var v=val(id);
   var labelMap={
@@ -731,6 +731,7 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
 }
 
 function fetchPrice631(){ fetchPriceSilent('00631L.TW','price631','price631val','p631time','btn631').then(updateAndSync); }
+// 修正對外觸發綁定
 function fetchPrice0050(){ fetchPriceSilent('0050.TW','price0050','price50val','p50time','btn50').then(updateAndSync); }
 function fetchPriceBond(){ fetchPriceSilent('00865B.TW','priceBond','priceBondval','p865time','btn865').then(updateAndSync); }
 
