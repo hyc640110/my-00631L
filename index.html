@@ -43,6 +43,7 @@ canvas{display:block;width:100%;border-radius:6px}
 .legend{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px}
 .legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#90a4ae}
 .legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.legend-dot-dash{width:16px;height:0;border-top:2px dashed #ef9a9a;flex-shrink:0;margin-top:4px}
 .toggle-btn{padding:3px 14px;border-radius:20px;font-size:11px;cursor:pointer;font-weight:700;border:none}
 .footer{text-align:center;font-size:10px;color:#37474f;max-width:640px;margin:0 auto;padding-top:8px}
 .msg{font-size:11px;font-weight:600}
@@ -291,6 +292,7 @@ canvas{display:block;width:100%;border-radius:6px}
     <div class="legend-item"><div class="legend-dot" style="background:#ff9800"></div>加碼部位</div>
     <div class="legend-item"><div class="legend-dot" style="background:#a5d6a7"></div>00865B</div>
     <div class="legend-item"><div class="legend-dot" style="background:#ffd54f"></div>現金</div>
+    <div class="legend-item"><div class="legend-dot-dash"></div>投入成本線</div>
   </div>
 </div>
 
@@ -527,7 +529,6 @@ function update(){
   var final=chartData[10], five=chartData[5];
   var totalCost=totalAssets+(addOnEnabled&&addOnSource=='new'?addOnAmt:0);
   
-  // 【徹底修復】將此前漏掉的單引號完全補齊：'#81d4fa'
   var cards=[
     {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:'#81d4fa',detail:'不加碼對照 '+fmt(five.totalBase)},
     {label:'十年後（含加碼）',val:fmt(final.total),sub:'+'+fmt(final.total-totalCost),color:'#ce93d8',detail:addOnEnabled?'加碼效益 +'+fmt(final.total-final.totalBase):'00631L '+fmt(final.v631)},
@@ -576,24 +577,48 @@ function update(){
   });
 }
 
+// 核心重構：讓 Y 軸刻度自動對齊「漂亮整數」，並將背景橫格線全面換成白色實線
 function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOnYear){
   var canvas=g('chart'); if(!canvas) return;
   var W=canvas.offsetWidth||canvas.parentElement.offsetWidth||320;
   canvas.width=W*2; canvas.height=520; canvas.style.width=W+'px'; canvas.style.height='260px';
   var ctx=canvas.getContext('2d'); 
   
-  var pad={top:20,right:20,bottom:30,left:110};
+  var pad={top:25,right:20,bottom:30,left:110};
   var cw=canvas.width-pad.left-pad.right; var ch=canvas.height-pad.top-pad.bottom;
   
-  var maxVal=0; data.forEach(function(d){ if(d.total>maxVal) maxVal=d.total; }); maxVal*=1.05;
+  // 找出數據中的最大值
+  var rawMax=0; data.forEach(function(d){ if(d.total>rawMax) rawMax=d.total; });
+  
+  // 【新邏輯】計算精準、漂亮的整數 Y 軸刻度跳躍距 (Step)
+  var rawStep = rawMax / 4;
+  var step = 100000; // 預設最小從 10 萬起跳
+  if (rawStep > 10000000) step = 10000000;     // 大於一千萬則以「千萬」整數跳格
+  else if (rawStep > 5000000) step = 5000000;   // 五百萬跳格
+  else if (rawStep > 2000000) step = 2000000;   // 二百萬跳格
+  else if (rawStep > 1000000) step = 1000000;   // 一百萬跳格
+  else if (rawStep > 500000) step = 500000;     // 五十萬跳格
+  else if (rawStep > 200000) step = 200000;     // 二十萬跳格
+
+  // 根據找到的漂亮整數步長，重新向上校正圖表天花板最大值
+  var maxVal = Math.ceil(rawMax / step) * step;
+  if (maxVal === 0) maxVal = step * 4;
+
   function xPos(i){ return pad.left+i*(cw/10); } function yPos(v){ return pad.top+ch*(1-v/maxVal); }
   
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
-  for(var i=0;i<=4;i++){
-    var y=pad.top+i*(ch/4); ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(pad.left+cw,y); ctx.stroke();
-    ctx.fillStyle='#546e7a'; ctx.font='20px -apple-system,sans-serif'; ctx.textAlign='right'; 
-    ctx.fillText(fmt(maxVal*(1-i/4)),pad.left-10,y+6);
+  
+  // 【新視覺】將橫格線全面改為高對比度的「白色線」（帶淡淡透明度，避免干擾主要區塊）
+  ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=1;
+  for(var i=0; i<=4; i++){
+    var curTickVal = (maxVal / 4) * (4 - i);
+    var y = pad.top + i * (ch / 4);
+    
+    ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(pad.left+cw,y); ctx.stroke();
+    
+    ctx.fillStyle='#90a4ae'; ctx.font='20px -apple-system,sans-serif'; ctx.textAlign='right'; 
+    // 現在輸出的 Y 軸數字保證是 2百萬、4百萬 等完美整數，不再有小數點了！
+    ctx.fillText(fmt(curTickVal),pad.left-10,y+6);
   }
 
   ctx.fillStyle='#546e7a';
@@ -621,7 +646,7 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
   var yLineInitial = yPos(costBase);
   
   ctx.save();
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
   ctx.strokeStyle = '#ef9a9a';
   ctx.setLineDash([8, 6]); 
   
