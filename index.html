@@ -161,7 +161,7 @@ canvas{display:block;width:100%;border-radius:6px}
   <div id="loanDetail" style="display:none;margin-top:10px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:10px;color:#78909c"></div>
 </div>
 
-<!-- 新調整位置：曝險分析大項移到這裡 -->
+<!-- 曝險分析 -->
 <div class="card card-red">
   <p class="section-title" style="color:#ef9a9a">⚠️ 曝險分析</p>
   <div style="font-size:10px;color:#78909c;margin-bottom:8px">目前曝險比例（占總資產）</div>
@@ -482,7 +482,9 @@ function update(){
     labels.innerHTML+='<span style="color:'+x[1]+'">'+x[0]+' <span style="color:#78909c">('+fmt(x[2])+')</span></span>';
   });
 
-  var loanInterest=loan*loanRate/100; var loanToAsset=totalAssets+loan>0?(loan/totalAssets*100).toFixed(1):'0.0';
+  var loanInterest=loan*loanRate/100; 
+  // 修正這裡：安全防錯計算，避免初始化時造成 JS 當機阻擋登入
+  var loanToAsset= (totalAssets) > 0 ? (loan/totalAssets*100).toFixed(1) : '0.0';
   var loanToNet=netAssets>0?(loan/netAssets*100).toFixed(1):'999'; var ls=g('loanSummary');
   if(!loan||loan===0){
     ls.innerHTML='<div>年利息 <b style="color:#ef9a9a">'+fmt(loanInterest)+'</b></div>'
@@ -523,8 +525,8 @@ function update(){
   var final=chartData[10], five=chartData[5];
   var totalCost=totalAssets+(addOnEnabled&&addOnSource==='new'?addOnAmt:0);
   var cards=[
-    {label:'十年後（含加碼）',val:fmt(final.total),sub:'+'+fmt(final.total-totalCost),color:#ce93d8,detail:addOnEnabled?'加碼效益 +'+fmt(final.total-final.totalBase):'00631L '+fmt(final.v631)},
-    {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:#81d4fa,detail:'不加碼對照 '+fmt(five.totalBase)},
+    {label:'十年後（含加碼）',val:fmt(final.total),sub:'+'+fmt(final.total-totalCost),color:'#ce93d8',detail:addOnEnabled?'加碼效益 +'+fmt(final.total-final.totalBase):'00631L '+fmt(final.v631)},
+    {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:'#81d4fa',detail:'不加碼對照 '+fmt(five.totalBase)},
     {label:'組合 Beta',val:beta,sub:beta>1.4?'積極型':'穩健型',color:beta>1.4?'#ff8a65':'#a5d6a7',detail:'00631L×1.9＋00865B×0.05'}
   ];
   var rc=g('resultCards'); rc.innerHTML='';
@@ -594,41 +596,6 @@ function drawChart(data, totalAssets){
   });
 }
 
-async function fetchPriceFromYahoo(ticker, inputId, varName, timeId, btnId) {
-  var btn = g(btnId); btn.textContent = '⏳'; btn.disabled = true;
-  try {
-    var res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + ticker)}`);
-    if (!res.ok) throw new Error();
-    var wrapper = await res.json();
-    var json = JSON.parse(wrapper.contents);
-    var price = json.chart.result[0].meta.regularMarketPrice;
-    
-    if (price) {
-      g(inputId).value = price;
-      if (varName === 'price631val') price631val = price; else priceBondval = price;
-      var now = new Date(); 
-      g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
-      updateAndSync();
-    } else { throw new Error(); }
-  } catch (e) {
-    try {
-      var resAlt = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://query2.finance.yahoo.com/v8/finance/chart/' + ticker)}`);
-      var wrapperAlt = await resAlt.json();
-      var jsonAlt = JSON.parse(wrapperAlt.contents);
-      var priceAlt = jsonAlt.chart.result[0].meta.regularMarketPrice;
-      if (priceAlt) {
-        g(inputId).value = priceAlt;
-        if (varName === 'price631val') price631val = priceAlt; else priceBondval = priceAlt;
-        var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
-        updateAndSync();
-        return;
-      }
-    } catch(err) {}
-    showMsg('storageMsg', '❌ 報價更新失敗，請先手動輸入', 3000);
-  } finally {
-    btn.textContent = '🔄'; btn.disabled = false;
-  }
-}
 function fetchPrice631(){ fetchPriceSilent('00631L.TW','price631','price631val','p631time','btn631').then(updateAndSync); }
 function fetchPriceBond(){ fetchPriceSilent('00865B.TW','priceBond','priceBondval','p865time','btn865').then(updateAndSync); }
 
@@ -682,7 +649,7 @@ async function loadFromCloud() {
         isCloudSyncing = false;
         autoRefreshAllPrices();
       }
-    }
+    } else { throw new Error(); }
   } catch(e) { g('cloudStatus').textContent = '❌ 連線失敗'; isCloudSyncing = false; }
 }
 
@@ -734,8 +701,8 @@ try{
     var conf = JSON.parse(confStr);
     g('fbUrl').value = conf.url || '';
     g('fbKey').value = conf.key || '';
-    if(conf.url && conf.key) { loadFromCloud(); } else { update(); autoRefreshAllPrices(); }
-  } else { update(); autoRefreshAllPrices(); }
+    if(conf.url && conf.key) { loadFromCloud(); } else { update(); }
+  } else { update(); }
 }catch(e){ update(); }
 
 window.addEventListener('resize', function(){ update(); });
