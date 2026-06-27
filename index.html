@@ -76,7 +76,7 @@ canvas{display:block;width:100%;border-radius:6px}
 
 <!-- 持股設定 -->
 <div class="card card-blue">
-  <p class="section-title" style="color:#4fc3f7">📊 持股設定</p>
+  <p class="section-title" style="color:#4fc3f7">📊 持股與實時配置</p>
   <div class="grid2" style="margin-bottom:10px">
     <div>
       <label>00631L 持股數</label>
@@ -105,7 +105,7 @@ canvas{display:block;width:100%;border-radius:6px}
       <div class="info-row">市值 <span id="valBond" style="color:#a5d6a7">-</span></div>
     </div>
   </div>
-  <div class="grid2">
+  <div class="grid2" style="margin-bottom:12px">
     <div>
       <label>現金（萬元）</label>
       <div style="display:flex;align-items:center;gap:4px">
@@ -114,10 +114,20 @@ canvas{display:block;width:100%;border-radius:6px}
       </div>
     </div>
     <div style="display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:2px">
-      <div style="font-size:10px;color:#546e7a">總資產</div>
+      <div style="font-size:10px;color:#546e7a">真實總資產</div>
       <div id="totalAssets" style="font-size:18px;font-weight:800;color:#ce93d8">-</div>
       <div id="assetBreakdown" style="font-size:10px;color:#546e7a"></div>
     </div>
+  </div>
+  
+  <!-- 新增：真實持股與現金配置比例條 -->
+  <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;margin-top:6px;">
+    <div style="font-size:10px;color:#78909c;margin-bottom:6px;display:flex;justify-content:between;">
+      <span>📊 當前真實資產配置權重</span>
+      <span id="realEffectiveBeta" style="margin-left:auto;color:#ffb74d;">有效Beta: -</span>
+    </div>
+    <div class="bar-container" id="realAllocBar" style="height:14px;margin-bottom:6px;"></div>
+    <div id="realAllocLabels" style="display:flex;gap:12px;font-size:10px;flex-wrap:wrap;"></div>
   </div>
 </div>
 
@@ -155,7 +165,7 @@ canvas{display:block;width:100%;border-radius:6px}
 <div class="card">
   <div class="grid2">
     <div>
-      <p class="section-title" style="color:#90caf9">📈 年化報酬率</p>
+      <p class="section-title" style="color:#90caf9">📈 模擬預期年化報酬率</p>
       <div class="slider-row">
         <div class="slider-label">
           <span style="font-size:11px;color:#4fc3f7;font-weight:600">00631L</span>
@@ -174,7 +184,7 @@ canvas{display:block;width:100%;border-radius:6px}
       </div>
     </div>
     <div>
-      <p class="section-title" style="color:#ce93d8">⚖️ 配置比例</p>
+      <p class="section-title" style="color:#ce93d8">⚖️ 模擬預期配置目標</p>
       <div class="slider-row">
         <div class="slider-label">
           <span style="font-size:11px;color:#4fc3f7;font-weight:600">00631L</span>
@@ -200,12 +210,12 @@ canvas{display:block;width:100%;border-radius:6px}
 <div class="card" style="max-width:640px;margin:0 auto 12px">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
     <div style="flex:1">
-      <div style="font-size:10px;color:#546e7a;margin-bottom:5px">配置分佈</div>
+      <div style="font-size:10px;color:#546e7a;margin-bottom:5px">模擬再平衡分佈</div>
       <div class="bar-container" id="allocBar"></div>
       <div id="allocLabels" style="display:flex;gap:10px;font-size:10px;flex-wrap:wrap"></div>
     </div>
     <div style="text-align:right;margin-left:12px">
-      <div style="font-size:10px;color:#546e7a">組合Beta</div>
+      <div style="font-size:10px;color:#546e7a">模擬組合Beta</div>
       <div id="betaVal" style="font-size:22px;font-weight:800">-</div>
       <div id="betaType" style="font-size:9px"></div>
     </div>
@@ -301,10 +311,9 @@ function fmt(v){
   return (v/10000).toFixed(1)+'萬';
 }
 
-// 核心更新優化：支援同步批次自動抓取，不重複呼叫雲端
 async function autoRefreshAllPrices() {
   g('storageMsg').textContent = '⚡ 正在自動抓取今日即時股價...';
-  isCloudSyncing = true; // 暫時鎖定同步，避免中途重複觸發 PUT
+  isCloudSyncing = true;
   try {
     await Promise.all([
       fetchPriceSilent('00631L.TW', 'price631', 'price631val', 'p631time', 'btn631'),
@@ -312,7 +321,7 @@ async function autoRefreshAllPrices() {
     ]);
   } catch(e) {}
   isCloudSyncing = false;
-  updateAndSync(); // 股價全部抓完後，一次性計算並同步到 Firebase 雲端
+  updateAndSync();
   showMsg('storageMsg', '✅ 今日最新股價已自動更新完畢', 3000);
 }
 
@@ -429,6 +438,7 @@ function update(){
   g('totalAssets').textContent=fmt(totalAssets);
   g('assetBreakdown').textContent='631L '+fmt(etf631Val)+' + 865B '+fmt(etfBondVal)+' + 現金 '+fmt(cash);
 
+  // 1. 計算「模擬預期再平衡」數據
   var init631=totalAssets*pct631/100; var initBond=totalAssets*pctBond/100; var initCash=totalAssets*pctCash/100;
   var beta=(pct631/100*1.9+pctBond/100*0.05).toFixed(2);
 
@@ -436,6 +446,29 @@ function update(){
   g('betaVal').textContent=beta; g('betaVal').style.color=beta>1.2?'#ff8a65':'#a5d6a7';
   g('betaType').textContent=beta>1.4?'積極型':beta>0.8?'穩健型':'保守型'; g('betaType').style.color=beta>1.4?'#ff8a65':'#a5d6a7';
 
+  // 2. 計算與渲染「當前真實資產配置比例」（新功能）
+  var r631Pct = totalAssets > 0 ? (etf631Val / totalAssets * 100) : 0;
+  var rBondPct = totalAssets > 0 ? (etfBondVal / totalAssets * 100) : 0;
+  var rCashPct = totalAssets > 0 ? (cash / totalAssets * 100) : 0;
+  var realBeta = (r631Pct / 100 * 1.9 + rBondPct / 100 * 0.05).toFixed(2);
+  
+  g('realEffectiveBeta').textContent = `真實組合Beta: ${realBeta}`;
+  
+  var rBar = g('realAllocBar'); rBar.innerHTML = '';
+  [[r631Pct, '#4fc3f7'], [rBondPct, '#a5d6a7'], [rCashPct, '#ffd54f']].forEach(function(item, i){
+    if(item[0] > 0){
+      var d = document.createElement('div'); d.style.flex = item[0]; d.style.background = item[1];
+      if(i === 0) d.style.borderRadius = '6px 0 0 6px'; if(i === 2) d.style.borderRadius = '0 6px 6px 0';
+      rBar.appendChild(d);
+    }
+  });
+  
+  g('realAllocLabels').innerHTML = 
+    `<span style="color:#4fc3f7">00631L: ${r631Pct.toFixed(1)}%</span>` +
+    `<span style="color:#a5d6a7">00865B: ${rBondPct.toFixed(1)}%</span>` +
+    `<span style="color:#ffd54f">現金: ${rCashPct.toFixed(1)}%</span>`;
+
+  // 3. 渲染模擬再平衡配置條
   var triggerPrice=(price631val*(1-addOnDrop/100)).toFixed(2);
   var dl=g('dropLabel'); if(dl) dl.textContent='觸發跌幅（≈'+triggerPrice+'元）';
 
@@ -564,7 +597,6 @@ function drawChart(data, totalAssets){
   });
 }
 
-// 保留手動點擊更新功能
 function fetchPrice631(){ fetchPriceSilent('00631L.TW','price631','price631val','p631time','btn631').then(updateAndSync); }
 function fetchPriceBond(){ fetchPriceSilent('00865B.TW','priceBond','priceBondval','p865time','btn865').then(updateAndSync); }
 
@@ -612,7 +644,6 @@ async function loadFromCloud() {
       if(cloudData) {
         applySettings(cloudData);
         g('cloudStatus').textContent = '✅ 雲端連線成功';
-        // 關鍵修改：從雲端順利抓到持股數等資料後，緊接著出發自動抓取即時股價
         autoRefreshAllPrices();
       } else {
         g('cloudStatus').textContent = '💡 雲端無資料 (已初始化)';
