@@ -120,7 +120,7 @@ canvas{display:block;width:100%;border-radius:6px}
     </div>
   </div>
   
-  <!-- 新增：真實持股與現金配置比例條 -->
+  <!-- 真實持股與現金配置比例條 -->
   <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;margin-top:6px;">
     <div style="font-size:10px;color:#78909c;margin-bottom:6px;display:flex;justify-content:between;">
       <span>📊 當前真實資產配置權重</span>
@@ -159,6 +159,19 @@ canvas{display:block;width:100%;border-radius:6px}
     <div id="loanSummary" style="font-size:10px;color:#546e7a;display:flex;flex-direction:column;justify-content:center;gap:4px"></div>
   </div>
   <div id="loanDetail" style="display:none;margin-top:10px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:10px;color:#78909c"></div>
+</div>
+
+<!-- 新調整位置：曝險分析大項移到這裡 -->
+<div class="card card-red">
+  <p class="section-title" style="color:#ef9a9a">⚠️ 曝險分析</p>
+  <div style="font-size:10px;color:#78909c;margin-bottom:8px">目前曝險比例（占總資產）</div>
+  <div class="bar-container" id="expBar"></div>
+  <div class="grid3" id="expCards" style="margin-bottom:10px"></div>
+  <div id="expTotal" style="font-size:11px;color:#90a4ae;text-align:center;margin-bottom:10px"></div>
+  <div id="loanExpCards"></div>
+  <div style="font-size:10px;color:#78909c;margin-bottom:8px;margin-top:10px">最大損失情境</div>
+  <div class="grid3" id="lossCards"></div>
+  <div style="font-size:10px;color:#546e7a;text-align:center;margin-top:6px">※ 00631L 以 Beta 1.9；00865B 以 Beta 0.05 計算</div>
 </div>
 
 <!-- 年化＋配置 -->
@@ -280,19 +293,6 @@ canvas{display:block;width:100%;border-radius:6px}
 
 <!-- 結果卡片 -->
 <div class="grid3" style="max-width:640px;margin:0 auto 12px" id="resultCards"></div>
-
-<!-- 曝險分析 -->
-<div class="card card-red">
-  <p class="section-title" style="color:#ef9a9a">⚠️ 曝險分析</p>
-  <div style="font-size:10px;color:#78909c;margin-bottom:8px">目前曝險比例（占總資產）</div>
-  <div class="bar-container" id="expBar"></div>
-  <div class="grid3" id="expCards" style="margin-bottom:10px"></div>
-  <div id="expTotal" style="font-size:11px;color:#90a4ae;text-align:center;margin-bottom:10px"></div>
-  <div id="loanExpCards"></div>
-  <div style="font-size:10px;color:#78909c;margin-bottom:8px;margin-top:10px">最大損失情境</div>
-  <div class="grid3" id="lossCards"></div>
-  <div style="font-size:10px;color:#546e7a;text-align:center;margin-top:6px">※ 00631L 以 Beta 1.9；00865B 以 Beta 0.05 計算</div>
-</div>
 
 <p class="footer">🚀 雲端自動版：登入或開啟網頁時會全自動更新最新股價並上傳。</p>
 
@@ -438,7 +438,6 @@ function update(){
   g('totalAssets').textContent=fmt(totalAssets);
   g('assetBreakdown').textContent='631L '+fmt(etf631Val)+' + 865B '+fmt(etfBondVal)+' + 現金 '+fmt(cash);
 
-  // 1. 計算「模擬預期再平衡」數據
   var init631=totalAssets*pct631/100; var initBond=totalAssets*pctBond/100; var initCash=totalAssets*pctCash/100;
   var beta=(pct631/100*1.9+pctBond/100*0.05).toFixed(2);
 
@@ -446,7 +445,6 @@ function update(){
   g('betaVal').textContent=beta; g('betaVal').style.color=beta>1.2?'#ff8a65':'#a5d6a7';
   g('betaType').textContent=beta>1.4?'積極型':beta>0.8?'穩健型':'保守型'; g('betaType').style.color=beta>1.4?'#ff8a65':'#a5d6a7';
 
-  // 2. 計算與渲染「當前真實資產配置比例」（新功能）
   var r631Pct = totalAssets > 0 ? (etf631Val / totalAssets * 100) : 0;
   var rBondPct = totalAssets > 0 ? (etfBondVal / totalAssets * 100) : 0;
   var rCashPct = totalAssets > 0 ? (cash / totalAssets * 100) : 0;
@@ -468,7 +466,6 @@ function update(){
     `<span style="color:#a5d6a7">00865B: ${rBondPct.toFixed(1)}%</span>` +
     `<span style="color:#ffd54f">現金: ${rCashPct.toFixed(1)}%</span>`;
 
-  // 3. 渲染模擬再平衡配置條
   var triggerPrice=(price631val*(1-addOnDrop/100)).toFixed(2);
   var dl=g('dropLabel'); if(dl) dl.textContent='觸發跌幅（≈'+triggerPrice+'元）';
 
@@ -526,8 +523,8 @@ function update(){
   var final=chartData[10], five=chartData[5];
   var totalCost=totalAssets+(addOnEnabled&&addOnSource==='new'?addOnAmt:0);
   var cards=[
-    {label:'十年後（含加碼）',val:fmt(final.total),sub:'+'+fmt(final.total-totalCost),color:'#ce93d8',detail:addOnEnabled?'加碼效益 +'+fmt(final.total-final.totalBase):'00631L '+fmt(final.v631)},
-    {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:'#81d4fa',detail:'不加碼對照 '+fmt(five.totalBase)},
+    {label:'十年後（含加碼）',val:fmt(final.total),sub:'+'+fmt(final.total-totalCost),color:#ce93d8,detail:addOnEnabled?'加碼效益 +'+fmt(final.total-final.totalBase):'00631L '+fmt(final.v631)},
+    {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:#81d4fa,detail:'不加碼對照 '+fmt(five.totalBase)},
     {label:'組合 Beta',val:beta,sub:beta>1.4?'積極型':'穩健型',color:beta>1.4?'#ff8a65':'#a5d6a7',detail:'00631L×1.9＋00865B×0.05'}
   ];
   var rc=g('resultCards'); rc.innerHTML='';
@@ -597,6 +594,41 @@ function drawChart(data, totalAssets){
   });
 }
 
+async function fetchPriceFromYahoo(ticker, inputId, varName, timeId, btnId) {
+  var btn = g(btnId); btn.textContent = '⏳'; btn.disabled = true;
+  try {
+    var res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + ticker)}`);
+    if (!res.ok) throw new Error();
+    var wrapper = await res.json();
+    var json = JSON.parse(wrapper.contents);
+    var price = json.chart.result[0].meta.regularMarketPrice;
+    
+    if (price) {
+      g(inputId).value = price;
+      if (varName === 'price631val') price631val = price; else priceBondval = price;
+      var now = new Date(); 
+      g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
+      updateAndSync();
+    } else { throw new Error(); }
+  } catch (e) {
+    try {
+      var resAlt = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://query2.finance.yahoo.com/v8/finance/chart/' + ticker)}`);
+      var wrapperAlt = await resAlt.json();
+      var jsonAlt = JSON.parse(wrapperAlt.contents);
+      var priceAlt = jsonAlt.chart.result[0].meta.regularMarketPrice;
+      if (priceAlt) {
+        g(inputId).value = priceAlt;
+        if (varName === 'price631val') price631val = priceAlt; else priceBondval = priceAlt;
+        var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
+        updateAndSync();
+        return;
+      }
+    } catch(err) {}
+    showMsg('storageMsg', '❌ 報價更新失敗，請先手動輸入', 3000);
+  } finally {
+    btn.textContent = '🔄'; btn.disabled = false;
+  }
+}
 function fetchPrice631(){ fetchPriceSilent('00631L.TW','price631','price631val','p631time','btn631').then(updateAndSync); }
 function fetchPriceBond(){ fetchPriceSilent('00865B.TW','priceBond','priceBondval','p865time','btn865').then(updateAndSync); }
 
