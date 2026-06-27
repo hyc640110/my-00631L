@@ -528,7 +528,7 @@ function update(){
   var totalCost=totalAssets+(addOnEnabled&&addOnSource=='new'?addOnAmt:0);
   
   var cards=[
-    {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:'#81d4fa',detail:'不加碼對照 '+fmt(five.totalBase)},
+    {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:#81d4fa',detail:'不加碼對照 '+fmt(five.totalBase)},
     {label:'十年後（含加碼）',val:fmt(final.total),sub:'+'+fmt(final.total-totalCost),color:'#ce93d8',detail:addOnEnabled?'加碼效益 +'+fmt(final.total-final.totalBase):'00631L '+fmt(final.v631)},
     {label:'組合 Beta',val:beta,sub:beta>1.4?'積極型':'穩健型',color:beta>1.4?'#ff8a65':'#a5d6a7',detail:'00631L×1.9＋00865B×0.05'}
   ];
@@ -579,7 +579,10 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
   var canvas=g('chart'); if(!canvas) return;
   var W=canvas.offsetWidth||canvas.parentElement.offsetWidth||320;
   canvas.width=W*2; canvas.height=520; canvas.style.width=W+'px'; canvas.style.height='260px';
-  var ctx=canvas.getContext('2d'); var pad={top:20,right:20,bottom:30,left:58};
+  var ctx=canvas.getContext('2d'); 
+  
+  // 【核心修改】將左邊留白 pad.left 從 58 加寬到 110，防止長數字被圖表左側削掉
+  var pad={top:20,right:20,bottom:30,left:110};
   var cw=canvas.width-pad.left-pad.right; var ch=canvas.height-pad.top-pad.bottom;
   
   var maxVal=0; data.forEach(function(d){ if(d.total>maxVal) maxVal=d.total; }); maxVal*=1.05;
@@ -589,10 +592,11 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
   ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
   for(var i=0;i<=4;i++){
     var y=pad.top+i*(ch/4); ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(pad.left+cw,y); ctx.stroke();
-    ctx.fillStyle='#546e7a'; ctx.font='20px -apple-system,sans-serif'; ctx.textAlign='right'; ctx.fillText(fmt(maxVal*(1-i/4)),pad.left-6,y+6);
+    ctx.fillStyle='#546e7a'; ctx.font='20px -apple-system,sans-serif'; ctx.textAlign='right'; 
+    // 現在留白夠了，完整的數字（如 13.52百萬）會完美向右對齊顯示出來
+    ctx.fillText(fmt(maxVal*(1-i/4)),pad.left-10,y+6);
   }
 
-  // 【修復1】重新補上橫軸 X 軸的「第0年、第2年...第10年」文字標籤
   ctx.fillStyle='#546e7a';
   ctx.font='18px -apple-system,sans-serif';
   ctx.textAlign='center';
@@ -614,7 +618,6 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
     ctx.closePath(); ctx.fillStyle=layer.color+'44'; ctx.fill();
   });
 
-  // 【修復2】修正高度算法：將萬元成本轉為與 Y 軸對齊的「元」單位數值
   var costBase = totalAssets; 
   var yLineInitial = yPos(costBase);
   
@@ -625,7 +628,6 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
   
   if (addOnEnabled && addOnSource === 'new') {
     var xTrigger = xPos(addOnYear);
-    // 加碼金額也是萬元，同樣轉為正確的元單位
     var yLineAfter = yPos(costBase + (addOnAmt * 10000));
     
     ctx.beginPath();
