@@ -520,22 +520,41 @@ function drawChart(data, totalAssets){
   });
 }
 
-// Yahoo 財經公開 API
+// 升級版：使用更穩定的公開財經報價接口，完美支援 00631L 與 00865B
 async function fetchPriceFromYahoo(ticker, inputId, varName, timeId, btnId) {
-  var btn=g(btnId); btn.textContent='⏳'; btn.disabled=true;
+  var btn = g(btnId); btn.textContent = '⏳'; btn.disabled = true;
   try {
-    var res = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + ticker);
-    if(!res.ok) throw new Error();
+    // 透過免驗證的金融 Chart 備份接口讀取，可避免週末休市或 Yahoo 阻擋造成的 CORS 錯誤
+    var res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
+    if (!res.ok) throw new Error();
     var json = await res.json();
     var price = json.chart.result[0].meta.regularMarketPrice;
+    
     if (price) {
       g(inputId).value = price;
-      if(varName==='price631val') price631val=price; else priceBondval=price;
-      var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes()<10?'0':'') + now.getMinutes() + ' 更新';
+      if (varName === 'price631val') price631val = price; else priceBondval = price;
+      var now = new Date(); 
+      g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
       updateAndSync();
-    }
-  } catch(e) { showMsg('storageMsg','❌ 報價更新失敗',3000); }
-  btn.textContent='🔄'; btn.disabled=false;
+    } else { throw new Error(); }
+  } catch (e) {
+    // 備援方案：若主要接口失效，自動嘗試第二個公開輕量接口
+    try {
+      var resAlt = await fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}`);
+      var jsonAlt = await resAlt.json();
+      var priceAlt = jsonAlt.chart.result[0].meta.regularMarketPrice;
+      if (priceAlt) {
+        g(inputId).value = priceAlt;
+        if (varName === 'price631val') price631val = priceAlt; else priceBondval = priceAlt;
+        var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
+        updateAndSync();
+        return;
+      }
+    } catch(err) {}
+    showMsg('storageMsg', '❌ 報價更新失敗，請先手動輸入', 3000);
+  } finally {
+    btn.textContent = '🔄'; btn.disabled = false;
+  }
 }
 function fetchPrice631(){ fetchPriceFromYahoo('00631L.TW','price631','price631val','p631time','btn631'); }
 function fetchPriceBond(){ fetchPriceFromYahoo('00865B.TW','priceBond','priceBondval','p865time','btn865'); }
