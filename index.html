@@ -167,6 +167,10 @@ canvas{display:block;width:100%;border-radius:6px}
   <div style="font-size:10px;color:#78909c;margin-bottom:8px">目前曝險比例（占總資產）</div>
   <div class="bar-container" id="expBar"></div>
   <div class="grid3" id="expCards" style="margin-bottom:10px"></div>
+  
+  <!-- 新增：將美債視為現金合併顯示的防禦項目 -->
+  <div id="combinedDefenseCard" style="margin-bottom:12px;padding:10px;background:rgba(255,213,79,0.06);border:1px solid rgba(255,213,79,0.2);border-radius:8px;text-align:center;font-size:11px;font-weight:600;"></div>
+  
   <div id="expTotal" style="font-size:11px;color:#90a4ae;text-align:center;margin-bottom:10px"></div>
   <div id="loanExpCards"></div>
   <div style="font-size:10px;color:#78909c;margin-bottom:8px;margin-top:10px">最大損失情境</div>
@@ -254,7 +258,8 @@ canvas{display:block;width:100%;border-radius:6px}
             <span style="font-size:11px;color:#ff9800;font-weight:600">加碼金額</span>
             <span id="addOnAmtLabel" class="slider-val" style="background:rgba(255,152,0,0.2);border:1px solid rgba(255,152,0,0.4);color:#ff9800">50萬</span>
           </div>
-          <input type="range" id="addOnAmt" min="1" max="100" step="1" value="50" oninput="updateSlider('addOnAmt')">
+          <!-- 提高 max 至 200 萬，讓滑桿更有餘裕 -->
+          <input type="range" id="addOnAmt" min="1" max="200" step="1" value="50" oninput="updateSlider('addOnAmt')">
           <div class="presets" id="addOnAmtPresets"></div>
         </div>
       </div>
@@ -549,6 +554,12 @@ function update(){
   [['00631L（2x槓桿）',e631Pct,etf631Val,'#4fc3f7','高風險'],['00865B（債券）',eBondPct,etfBondVal,'#a5d6a7','低風險'],['現金',eCashPct,cash,'#ffd54f','零風險']].forEach(function(x){
     ec.innerHTML+='<div class="stat-card" style="background:'+x[3]+'11;border:1px solid '+x[3]+'33"><div class="stat-label">'+x[0]+'</div><div style="font-size:18px;font-weight:800;color:'+x[3]+'">'+x[1]+'%</div><div style="font-size:10px;color:#546e7a">'+fmt(x[2])+'</div></div>';
   });
+
+  // 更新新增的美債＋現金合併防禦欄位邏輯
+  var combinedDefenseVal = etfBondVal + cash;
+  var combinedDefensePct = totalAssets > 0 ? (combinedDefenseVal / totalAssets * 100).toFixed(1) : '0.0';
+  g('combinedDefenseCard').innerHTML = `🛡️ 寬鬆防禦資產 (00865B美債 + 現金)：<span style="color:#ffd54f; font-size:14px; font-weight:800;">${combinedDefensePct}%</span> <span style="color:#90a4ae; font-size:10px; font-weight:normal;">(${fmt(combinedDefenseVal)})</span>`;
+
   g('expTotal').innerHTML='總曝險 <b style="color:#ef9a9a"> '+stockExpPct+'%</b> 有效Beta <b style="color:#ffcc80">'+beta+'</b>';
 
   var lec=g('loanExpCards'); lec.innerHTML='';
@@ -690,15 +701,12 @@ makePresets('rateBondPresets','rateBond',[{label:'3%',val:3},{label:'4.5%',val:4
 makePresets('pct631Presets','pct631',[{label:'40%',val:40},{label:'50%',val:50},{label:'60%',val:60}],'%',true);
 makePresets('pctBondPresets','pctBond',[{label:'15%',val:15},{label:'25%',val:25},{label:'30%',val:30}],'%',true);
 
-// 修正與擴充：完美對應滑桿單位，精確生成 1萬 到 20萬 的按鈕
+// 建議1修正：大改為更大手筆的加碼按鈕配置
 makePresets('addOnAmtPresets','addOnAmt',[
-  {label:'1萬',val:1},
-  {label:'3萬',val:3},
-  {label:'5萬',val:5},
-  {label:'8萬',val:8},
   {label:'10萬',val:10},
-  {label:'15萬',val:15},
-  {label:'20萬',val:20}
+  {label:'30萬',val:30},
+  {label:'50萬',val:50},
+  {label:'100萬',val:100}
 ],'萬',true);
 
 makePresets('addOnDropPresets','addOnDrop',[{label:'-15%',val:15},{label:'-25%',val:25},{label:'-35%',val:35}],'%',true);
