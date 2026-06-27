@@ -96,7 +96,7 @@ canvas{display:block;width:100%;border-radius:6px}
     </div>
   </div>
 
-  <!-- 0050：預設為 5000 股 -->
+  <!-- 0050：預設改為 5000 股 -->
   <div class="grid2" style="margin-bottom:10px">
     <div>
       <label>0050 持股數</label>
@@ -155,7 +155,7 @@ canvas{display:block;width:100%;border-radius:6px}
   </div>
 </div>
 
-<!-- 借款設定：預設為金額 155萬、利率 4.23%、啟始 2026-06、期數 60期 -->
+<!-- 借款設定：預設改為155萬、利率4.23%、啟始2026-06、總期數60期 -->
 <div class="card card-orange">
   <p class="section-title" style="color:#ffb74d">🏦 信貸借款設定</p>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
@@ -289,8 +289,8 @@ canvas{display:block;width:100%;border-radius:6px}
       <div>
         <div style="font-size:10px;color:#78909c;margin-bottom:6px">資金來源</div>
         <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-          <button id="srcCash" class="tab-btn" style="background:rgba(255,152,0,0.25);border-color:#ff9800;color:#ff9800" onclick="setSource('cash')">從現金扣除</button>
-          <button id="srcNew" class="tab-btn" style="background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.1);color:#78909c" onclick="setSource('new')">額外新增</button>
+          <button id="srcCash" class="tab-btn" style="background:rgba(255,152,0,0.25);border-color:#ff9800;color:#ff9800" onclick="setSource('cash')">防禦現金扣除</button>
+          <button id="srcNew" class="tab-btn" style="background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.1);color:#78909c" onclick="setSource('new')">額外新增資金</button>
         </div>
         <div class="slider-row">
           <div class="slider-label">
@@ -339,7 +339,7 @@ canvas{display:block;width:100%;border-radius:6px}
 <!-- 結果卡片欄位 -->
 <div class="grid3" style="max-width:640px;margin:0 auto 12px" id="resultCards"></div>
 
-<p class="footer">🚀 雲端自動版：登入 or 開啟網頁時會全自動更新最新股價並上傳。</p>
+<p class="footer">🚀 雲端自動版：登入或開啟網頁時會全自動更新最新股價並上傳。</p>
 
 <script>
 var STORAGE_KEY='portfolio-v4';
@@ -388,6 +388,7 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
     }
   } catch (e) {
     try {
+      // 【完全修復】修正備援線路中 Ticker 被寫死重複加上 .TW 的問題
       var resAlt = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://query2.finance.yahoo.com/v8/finance/chart/' + ticker)}`);
       var wrapperAlt = await resAlt.json();
       var jsonAlt = JSON.parse(wrapperAlt.contents);
@@ -438,6 +439,7 @@ function updatePresetActive(containerId,inputId,items,curVal){
   btns.forEach(function(b,i){ b.classList.toggle('active', String(items[i].val)===String(curVal)); });
 }
 
+// 支援 0050 的 Slider 標籤變動映射
 function updateSlider(id){
   var v=val(id);
   var labelMap={
@@ -549,8 +551,8 @@ function update(){
   if(loan>0){
     ld.style.display=''; var monthRate=loanRate/100/12; var totalMonths=parseInt(g('loanTotalMonths').value)||84;
     var monthlyPayment=monthRate>0 ? loan*monthRate*Math.pow(1+monthRate,totalMonths)/(Math.pow(1+monthRate,totalMonths)-1) : loan/totalMonths;
-    var startStr=g('loanStart').value||'2024-01'; var parts=startStr.split('-');
-    var startYear=parseInt(parts[0])||2024, startMonth=parseInt(parts[1])||1;
+    var startStr=g('loanStart').value||'2026-06'; var parts=startStr.split('-');
+    var startYear=parseInt(parts[0])||2026, startMonth=parseInt(parts[1])||6;
     var now=new Date(); var nowYear=now.getFullYear(); var nowMonth=now.getMonth()+1;
     var elapsed=(nowYear-startYear)*12+(nowMonth-startMonth);
     var remaining=Math.max(0,totalMonths-elapsed); var paidMonths=Math.min(elapsed,totalMonths);
@@ -597,7 +599,7 @@ function update(){
     if(x[0]>0){
       var d = document.createElement('div'); d.style.flex = x[0]; d.style.background = x[1];
       if(i===0) d.style.borderRadius = '6px 0 0 6px'; if(i===3) d.style.borderRadius = '0 6px 6px 0';
-      eb.appendChild(d);
+      rBar.appendChild(d);
     }
   });
   var ec=g('expCards'); ec.innerHTML='';
