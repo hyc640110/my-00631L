@@ -522,7 +522,6 @@ function update(){
     var totalBase=init631*Math.pow(1+rate631/100,i)+initBond*Math.pow(1+rateBond/100,i)+initCash;
     chartData.push({year:i,v631:Math.round(v631),vAdd:Math.round(vAdd),vBond:Math.round(vBond),vCash:Math.round(vCash),total:Math.round(v631+vBond+vCash+vAdd),totalBase:Math.round(totalBase)});
   }
-  // 傳入 totalAssets 以及加碼設定
   drawChart(chartData, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOnYear);
 
   var final=chartData[10], five=chartData[5];
@@ -576,7 +575,6 @@ function update(){
   });
 }
 
-// 核心改動：精確在 Canvas 上繪製對齊對應 y 軸數值的「原始總成本虛線」
 function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOnYear){
   var canvas=g('chart'); if(!canvas) return;
   var W=canvas.offsetWidth||canvas.parentElement.offsetWidth||320;
@@ -593,6 +591,14 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
     var y=pad.top+i*(ch/4); ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(pad.left+cw,y); ctx.stroke();
     ctx.fillStyle='#546e7a'; ctx.font='20px -apple-system,sans-serif'; ctx.textAlign='right'; ctx.fillText(fmt(maxVal*(1-i/4)),pad.left-6,y+6);
   }
+
+  // 【修復1】重新補上橫軸 X 軸的「第0年、第2年...第10年」文字標籤
+  ctx.fillStyle='#546e7a';
+  ctx.font='18px -apple-system,sans-serif';
+  ctx.textAlign='center';
+  for(var i=0; i<=10; i+=2){
+    ctx.fillText('第'+i+'年', xPos(i), canvas.height - 6);
+  }
   
   var layers=[{key:'v631',color:'#4fc3f7'},{key:'vAdd',color:'#ff9800'},{key:'vBond',color:'#a5d6a7'},{key:'vCash',color:'#ffd54f'}];
   layers.forEach(function(layer){
@@ -608,19 +614,19 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
     ctx.closePath(); ctx.fillStyle=layer.color+'44'; ctx.fill();
   });
 
-  // 完美對應圖形，動態畫出原始本金虛線
-  var costBase = totalAssets;
+  // 【修復2】修正高度算法：將萬元成本轉為與 Y 軸對齊的「元」單位數值
+  var costBase = totalAssets; 
   var yLineInitial = yPos(costBase);
   
   ctx.save();
   ctx.lineWidth = 2;
   ctx.strokeStyle = '#ef9a9a';
-  ctx.setLineDash([8, 6]); // 設定虛線樣式
+  ctx.setLineDash([8, 6]); 
   
   if (addOnEnabled && addOnSource === 'new') {
-    // 情境 A：如果是額外掏新錢加碼，虛線會在加碼年分往上抬升
     var xTrigger = xPos(addOnYear);
-    var yLineAfter = yPos(costBase + addOnAmt);
+    // 加碼金額也是萬元，同樣轉為正確的元單位
+    var yLineAfter = yPos(costBase + (addOnAmt * 10000));
     
     ctx.beginPath();
     ctx.moveTo(xPos(0), yLineInitial);
@@ -629,15 +635,13 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
     ctx.lineTo(xPos(10), yLineAfter);
     ctx.stroke();
     
-    // 文字標示
-    ctx.setLineDash([]); // 恢復實線寫字
+    ctx.setLineDash([]); 
     ctx.fillStyle = '#ef9a9a';
     ctx.font = 'bold 18px -apple-system,sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText('原始成本: ' + fmt(costBase), xPos(0) + 10, yLineInitial - 8);
-    ctx.fillText('加碼後總成本: ' + fmt(costBase + addOnAmt), xTrigger + 10, yLineAfter - 8);
+    ctx.fillText('加碼後總成本: ' + fmt(costBase + (addOnAmt * 10000)), xTrigger + 10, yLineAfter - 8);
   } else {
-    // 情境 B：無加碼或是從現有現金扣除，總投入成本為一條水平直線
     ctx.beginPath();
     ctx.moveTo(xPos(0), yLineInitial);
     ctx.lineTo(xPos(10), yLineInitial);
