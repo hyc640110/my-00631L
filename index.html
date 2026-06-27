@@ -168,7 +168,6 @@ canvas{display:block;width:100%;border-radius:6px}
   <div class="bar-container" id="expBar"></div>
   <div class="grid3" id="expCards" style="margin-bottom:10px"></div>
   
-  <!-- 新增：將美債視為現金合併顯示的防禦項目 -->
   <div id="combinedDefenseCard" style="margin-bottom:12px;padding:10px;background:rgba(255,213,79,0.06);border:1px solid rgba(255,213,79,0.2);border-radius:8px;text-align:center;font-size:11px;font-weight:600;"></div>
   
   <div id="expTotal" style="font-size:11px;color:#90a4ae;text-align:center;margin-bottom:10px"></div>
@@ -258,7 +257,6 @@ canvas{display:block;width:100%;border-radius:6px}
             <span style="font-size:11px;color:#ff9800;font-weight:600">加碼金額</span>
             <span id="addOnAmtLabel" class="slider-val" style="background:rgba(255,152,0,0.2);border:1px solid rgba(255,152,0,0.4);color:#ff9800">50萬</span>
           </div>
-          <!-- 提高 max 至 200 萬，讓滑桿更有餘裕 -->
           <input type="range" id="addOnAmt" min="1" max="200" step="1" value="50" oninput="updateSlider('addOnAmt')">
           <div class="presets" id="addOnAmtPresets"></div>
         </div>
@@ -524,7 +522,8 @@ function update(){
     var totalBase=init631*Math.pow(1+rate631/100,i)+initBond*Math.pow(1+rateBond/100,i)+initCash;
     chartData.push({year:i,v631:Math.round(v631),vAdd:Math.round(vAdd),vBond:Math.round(vBond),vCash:Math.round(vCash),total:Math.round(v631+vBond+vCash+vAdd),totalBase:Math.round(totalBase)});
   }
-  drawChart(chartData, totalAssets);
+  // 傳入 totalAssets 以及加碼設定
+  drawChart(chartData, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOnYear);
 
   var final=chartData[10], five=chartData[5];
   var totalCost=totalAssets+(addOnEnabled&&addOnSource=='new'?addOnAmt:0);
@@ -555,7 +554,6 @@ function update(){
     ec.innerHTML+='<div class="stat-card" style="background:'+x[3]+'11;border:1px solid '+x[3]+'33"><div class="stat-label">'+x[0]+'</div><div style="font-size:18px;font-weight:800;color:'+x[3]+'">'+x[1]+'%</div><div style="font-size:10px;color:#546e7a">'+fmt(x[2])+'</div></div>';
   });
 
-  // 更新新增的美債＋現金合併防禦欄位邏輯
   var combinedDefenseVal = etfBondVal + cash;
   var combinedDefensePct = totalAssets > 0 ? (combinedDefenseVal / totalAssets * 100).toFixed(1) : '0.0';
   g('combinedDefenseCard').innerHTML = `🛡️ 寬鬆防禦資產 (00865B美債 + 現金)：<span style="color:#ffd54f; font-size:14px; font-weight:800;">${combinedDefensePct}%</span> <span style="color:#90a4ae; font-size:10px; font-weight:normal;">(${fmt(combinedDefenseVal)})</span>`;
@@ -578,20 +576,24 @@ function update(){
   });
 }
 
-function drawChart(data, totalAssets){
+// 核心改動：精確在 Canvas 上繪製對齊對應 y 軸數值的「原始總成本虛線」
+function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOnYear){
   var canvas=g('chart'); if(!canvas) return;
   var W=canvas.offsetWidth||canvas.parentElement.offsetWidth||320;
   canvas.width=W*2; canvas.height=520; canvas.style.width=W+'px'; canvas.style.height='260px';
   var ctx=canvas.getContext('2d'); var pad={top:20,right:20,bottom:30,left:58};
   var cw=canvas.width-pad.left-pad.right; var ch=canvas.height-pad.top-pad.bottom;
+  
   var maxVal=0; data.forEach(function(d){ if(d.total>maxVal) maxVal=d.total; }); maxVal*=1.05;
   function xPos(i){ return pad.left+i*(cw/10); } function yPos(v){ return pad.top+ch*(1-v/maxVal); }
+  
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
   for(var i=0;i<=4;i++){
     var y=pad.top+i*(ch/4); ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(pad.left+cw,y); ctx.stroke();
     ctx.fillStyle='#546e7a'; ctx.font='20px -apple-system,sans-serif'; ctx.textAlign='right'; ctx.fillText(fmt(maxVal*(1-i/4)),pad.left-6,y+6);
   }
+  
   var layers=[{key:'v631',color:'#4fc3f7'},{key:'vAdd',color:'#ff9800'},{key:'vBond',color:'#a5d6a7'},{key:'vCash',color:'#ffd54f'}];
   layers.forEach(function(layer){
     ctx.beginPath();
@@ -605,6 +607,49 @@ function drawChart(data, totalAssets){
     }
     ctx.closePath(); ctx.fillStyle=layer.color+'44'; ctx.fill();
   });
+
+  // 完美對應圖形，動態畫出原始本金虛線
+  var costBase = totalAssets;
+  var yLineInitial = yPos(costBase);
+  
+  ctx.save();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#ef9a9a';
+  ctx.setLineDash([8, 6]); // 設定虛線樣式
+  
+  if (addOnEnabled && addOnSource === 'new') {
+    // 情境 A：如果是額外掏新錢加碼，虛線會在加碼年分往上抬升
+    var xTrigger = xPos(addOnYear);
+    var yLineAfter = yPos(costBase + addOnAmt);
+    
+    ctx.beginPath();
+    ctx.moveTo(xPos(0), yLineInitial);
+    ctx.lineTo(xTrigger, yLineInitial);
+    ctx.lineTo(xTrigger, yLineAfter);
+    ctx.lineTo(xPos(10), yLineAfter);
+    ctx.stroke();
+    
+    // 文字標示
+    ctx.setLineDash([]); // 恢復實線寫字
+    ctx.fillStyle = '#ef9a9a';
+    ctx.font = 'bold 18px -apple-system,sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('原始成本: ' + fmt(costBase), xPos(0) + 10, yLineInitial - 8);
+    ctx.fillText('加碼後總成本: ' + fmt(costBase + addOnAmt), xTrigger + 10, yLineAfter - 8);
+  } else {
+    // 情境 B：無加碼或是從現有現金扣除，總投入成本為一條水平直線
+    ctx.beginPath();
+    ctx.moveTo(xPos(0), yLineInitial);
+    ctx.lineTo(xPos(10), yLineInitial);
+    ctx.stroke();
+    
+    ctx.setLineDash([]); 
+    ctx.fillStyle = '#ef9a9a';
+    ctx.font = 'bold 18px -apple-system,sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('原始成本: ' + fmt(costBase), xPos(0) + 10, yLineInitial - 8);
+  }
+  ctx.restore();
 }
 
 function fetchPrice631(){ fetchPriceSilent('00631L.TW','price631','price631val','p631time','btn631').then(updateAndSync); }
@@ -701,7 +746,6 @@ makePresets('rateBondPresets','rateBond',[{label:'3%',val:3},{label:'4.5%',val:4
 makePresets('pct631Presets','pct631',[{label:'40%',val:40},{label:'50%',val:50},{label:'60%',val:60}],'%',true);
 makePresets('pctBondPresets','pctBond',[{label:'15%',val:15},{label:'25%',val:25},{label:'30%',val:30}],'%',true);
 
-// 建議1修正：大改為更大手筆的加碼按鈕配置
 makePresets('addOnAmtPresets','addOnAmt',[
   {label:'10萬',val:10},
   {label:'30萬',val:30},
