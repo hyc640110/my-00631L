@@ -360,7 +360,6 @@ async function autoRefreshAllPrices() {
   g('storageMsg').textContent = '⚡ 正在自動抓取今日即時股價...';
   isCloudSyncing = true;
   try {
-    // 【修復】0050的標準 Yahoo 代號確認為 0050.TW 傳入
     await Promise.all([
       fetchPriceSilent('00631L.TW', 'price631', 'price631val', 'p631time', 'btn631'),
       fetchPriceSilent('0050.TW', 'price0050', 'price50val', 'p50time', 'btn50'),
@@ -382,9 +381,10 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
     var price = json.chart.result[0].meta.regularMarketPrice;
     if (price) {
       g(inputId).value = price;
+      // 【完全綁定修復】嚴格根據傳入的變數容器名稱，精準寫入對應全域變數中
       if (varName === 'price631val') price631val = price; 
       else if (varName === 'price50val') price50val = price;
-      else priceBondval = price;
+      else if (varName === 'priceBondval') priceBondval = price;
       var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
     }
   } catch (e) {
@@ -395,9 +395,10 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
       var priceAlt = jsonAlt.chart.result[0].meta.regularMarketPrice;
       if (priceAlt) {
         g(inputId).value = priceAlt;
+        // 【完全綁定修復】備援 API 對應全域變數修正
         if (varName === 'price631val') price631val = priceAlt;
         else if (varName === 'price50val') price50val = priceAlt;
-        else priceBondval = priceAlt;
+        else if (varName === 'priceBondval') priceBondval = priceAlt;
         var now = new Date(); g(timeId).textContent = '● ' + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' 更新';
       }
     } catch(err) {}
@@ -413,7 +414,7 @@ function applyPrice(inputId, varName){
   if(!isNaN(v)&&v>0){
     if(varName==='price631val') price631val=v;
     else if(varName==='price50val') price50val=v;
-    else priceBondval=v;
+    else if(varName==='priceBondval') priceBondval=v;
     updateAndSync();
   } else {
     g(inputId).value = (varName==='price631val') ? price631val : ((varName==='price50val') ? price50val : priceBondval);
@@ -506,7 +507,6 @@ function update(){
   
   g('realEffectiveBeta').textContent = `真實組合Beta: ${realBeta}`;
   
-  // 【重構】動態計算橫條圓角，杜絕幽靈空白格
   var rBar = g('realAllocBar'); rBar.innerHTML = '';
   var rawAllocArr = [[r631Pct, '#4fc3f7'], [r50Pct, '#5c6bc0'], [rBondPct, '#a5d6a7'], [rCashPct, '#ffd54f']];
   var activeAlloc = rawAllocArr.filter(function(item){ return item[0] > 0; });
@@ -586,8 +586,8 @@ function update(){
   var totalCost=totalAssets+(addOnEnabled&&addOnSource=='new'?addOnAmt:0);
   
   var cards=[
-    {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:'#81d4fa',detail:'複利滾動中'},
-    {label:'十年後（含加碼）',val:fmt(final.total),sub:'+'+fmt(final.total-totalCost),color:'#ce93d8',detail:'長期複利成效'},
+    {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:'#81d4fa',detail:'不加碼對照 '+fmt(five.totalBase)},
+    {label:'十年後（含加碼）',val:fmt(final.total),sub:'+'+fmt(final.total-totalCost),color:'#ce93d8',detail:addOnEnabled?'加碼效益 +'+fmt(final.total-final.totalBase):'00631L '+fmt(final.v631)},
     {label:'組合 Beta',val:beta,sub:beta>1.2?'積極型':'穩健型',color:'#a5d6a7',detail:'00631L×1.9＋0050×1.0＋00865B×0.05'}
   ];
   var rc=g('resultCards'); rc.innerHTML='';
@@ -596,7 +596,7 @@ function update(){
   });
 
   var stockExp=etf631Val+etf50Val+etfBondVal; var stockExpPct=(stockExp/totalAssets*100).toFixed(1);
-  var e631Pct=(etf631Val/totalAssets*100).toFixed(1), e50Pct=(etf50Val/totalAssets*100).toFixed(1), eBondPct=(etfBondVal/totalAssets*100).toFixed(1), eCashPct=(cash/totalAssets*100).toFixed(1);
+  var e631Pct=(etf631Val/totalAssets*100).toFixed(1), eBondPct=(etfBondVal/totalAssets*100).toFixed(1), eCashPct=(cash/totalAssets*100).toFixed(1), e50Pct=(etf50Val/totalAssets*100).toFixed(1);
 
   var eb=g('expBar'); eb.innerHTML='';
   var expActiveArr = [[parseFloat(e631Pct),'#4fc3f7'],[parseFloat(e50Pct),'#5c6bc0'],[parseFloat(eBondPct),'#a5d6a7'],[parseFloat(eCashPct),'#ffd54f']].filter(function(x){return x[0]>0;});
