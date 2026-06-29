@@ -358,8 +358,6 @@ function fmt(v){
 
 async function autoRefreshAllPrices() {
   g('storageMsg').textContent = '⚡ 正在自動抓取今日即時股價...';
-  var oldLock = isCloudSyncing;
-  isCloudSyncing = true; 
   try {
     await Promise.all([
       fetchPriceSilent('00631L.TW', 'price631', 'price631val', 'p631time', 'btn631'),
@@ -367,10 +365,10 @@ async function autoRefreshAllPrices() {
       fetchPriceSilent('00865B.TW', 'priceBond', 'priceBondval', 'p865time', 'btn865')
     ]);
   } catch(e) {}
-  isCloudSyncing = oldLock;
   
   updateAndSync();
-  showMsg('storageMsg', '✅ 今日最新股價已自動更新完畢', 3000);
+  g('storageMsg').textContent = '✅ 今日最新股價已自動更新完畢';
+  setTimeout(function(){ g('storageMsg').textContent = ''; }, 3000);
 }
 
 async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
@@ -808,18 +806,18 @@ async function loadFromCloud() {
       if(cloudData) {
         applySettings(cloudData);
         g('cloudStatus').textContent = '✅ 雲端連線成功';
-        autoRefreshAllPrices();
       } else {
         g('cloudStatus').textContent = '💡 雲端無資料 (已初始化)';
-        isCloudSyncing = false;
-        autoRefreshAllPrices();
       }
     } else { throw new Error(); }
-  } catch(e) { g('cloudStatus').textContent = '❌ 連線失敗'; isCloudSyncing = false; }
+  } catch(e) { g('cloudStatus').textContent = '❌ 連線失敗'; }
+  
+  // 徹底隔離：下載邏輯跑完，完全釋放狀態後，才異步觸發價格抓取
+  isCloudSyncing = false;
+  autoRefreshAllPrices();
 }
 
 function getSettings(){
-  // 🛡️ 徹底修正：將原先手誤混入的 priceBond = priceBondval 改回正確的物件冒號語法 :
   return {
     shares:val('shares'), price631:price631val, shares0050:val('shares0050'), price0050:price50val, sharesBond:val('sharesBond'), priceBond:priceBondval,
     cash:val('cash'), rate631:val('rate631'), rate50:val('rate50'), rateBond:val('rateBond'), pct631:val('pct631'), pct50:val('pct50'), pctBond:val('pctBond'),
