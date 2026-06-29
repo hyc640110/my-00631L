@@ -499,20 +499,20 @@ function update(){
   g('betaVal').textContent=beta; g('betaVal').style.color=beta>1.2?'#ff8a65':'#a5d6a7';
   g('betaType').textContent=beta>1.4?'積極型':beta>0.8?'穩健型':'保守型'; g('betaType').style.color=beta>1.4?'#ff8a65':'#a5d6a7';
 
-  // 徹底修正：直接將計算出的比例和 Beta 賦值，解決變數重複宣告白屏漏洞
-  var r631Pct = 0, r50Pct = 0, rBondPct = 0, rCashPct = 0, realBeta = "0.00";
+  // 🛡️ 徹底修復變數命名衝突：將變數更名，避免與全域範疇產生任何阻斷錯誤
+  var calc631Pct = 0, calc50Pct = 0, calcBondPct = 0, calcCashPct = 0, realBetaVal = "0.00";
   if (totalAssets > 0) {
-    r631Pct = (etf631Val / totalAssets * 100);
-    r50Pct = (etf50Val / totalAssets * 100);
-    rBondPct = (etfBondVal / totalAssets * 100);
-    rCashPct = (cash / totalAssets * 100);
-    realBeta = (r631Pct / 100 * 1.9 + r50Pct / 100 * 1.0 + rBondPct / 100 * 0.05).toFixed(2);
+    calc631Pct = (etf631Val / totalAssets * 100);
+    calc50Pct = (etf50Val / totalAssets * 100);
+    calcBondPct = (etfBondVal / totalAssets * 100);
+    calcCashPct = (cash / totalAssets * 100);
+    realBetaVal = (calc631Pct / 100 * 1.9 + calc50Pct / 100 * 1.0 + calcBondPct / 100 * 0.05).toFixed(2);
   }
   
-  g('realEffectiveBeta').textContent = `真實組合Beta: ${realBeta}`;
+  g('realEffectiveBeta').textContent = `真實組合Beta: ${realBetaVal}`;
   
   var rBar = g('realAllocBar'); rBar.innerHTML = '';
-  var rawAllocArr = [[r631Pct, '#4fc3f7'], [r50Pct, '#5c6bc0'], [rBondPct, '#a5d6a7'], [rCashPct, '#ffd54f']];
+  var rawAllocArr = [[calc631Pct, '#4fc3f7'], [calc50Pct, '#5c6bc0'], [calcBondPct, '#a5d6a7'], [calcCashPct, '#ffd54f']];
   var activeAlloc = rawAllocArr.filter(function(item){ return item[0] > 0; });
   
   activeAlloc.forEach(function(item, idx){
@@ -523,10 +523,10 @@ function update(){
   });
   
   g('realAllocLabels').innerHTML = 
-    `<span style="color:#4fc3f7">00631L: ${r631Pct.toFixed(1)}%</span> ` +
-    `<span style="color:#5c6bc0">0050: ${r50Pct.toFixed(1)}%</span> ` +
-    `<span style="color:#a5d6a7">00865B: ${rBondPct.toFixed(1)}%</span> ` +
-    `<span style="color:#ffd54f">現金: ${rCashPct.toFixed(1)}%</span>`;
+    `<span style="color:#4fc3f7">00631L: ${calc631Pct.toFixed(1)}%</span> ` +
+    `<span style="color:#5c6bc0">0050: ${calc50Pct.toFixed(1)}%</span> ` +
+    `<span style="color:#a5d6a7">00865B: ${calcBondPct.toFixed(1)}%</span> ` +
+    `<span style="color:#ffd54f">現金: ${calcCashPct.toFixed(1)}%</span>`;
 
   var triggerPrice=(price631val*(1-addOnDrop/100)).toFixed(2);
   var dl=g('dropLabel'); if(dl) dl.textContent='觸發跌幅（≈'+triggerPrice+'元）';
@@ -821,7 +821,7 @@ async function loadFromCloud() {
 
 function getSettings(){
   return {
-    shares:val('shares'), price631:price631val, shares0050:val('shares0050'), price0050:price50val, sharesBond:val('sharesBond'), priceBond:priceBondval,
+    shares:val('shares'), price631:price631val, shares0050:val('shares0050'), price0050:price50val, sharesBond:val('sharesBond'), priceBond=priceBondval,
     cash:val('cash'), rate631:val('rate631'), rate50:val('rate50'), rateBond:val('rateBond'), pct631:val('pct631'), pct50:val('pct50'), pctBond:val('pctBond'),
     addOnEnabled:addOnEnabled, addOnSource:addOnSource, addOnAmt:val('addOnAmt'), addOnDrop:val('addOnDrop'), addOnYear:val('addOnYear'),
     loanAmount:val('loanAmount'), loanRate:parseFloat(g('loanRate').value)||3.5, loanStart:g('loanStart').value, loanTotalMonths:val('loanTotalMonths')||84,
