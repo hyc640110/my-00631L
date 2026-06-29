@@ -499,7 +499,6 @@ function update(){
   g('betaVal').textContent=beta; g('betaVal').style.color=beta>1.2?'#ff8a65':'#a5d6a7';
   g('betaType').textContent=beta>1.4?'積極型':beta>0.8?'穩健型':'保守型'; g('betaType').style.color=beta>1.4?'#ff8a65':'#a5d6a7';
 
-  // 🛡️ 徹底修復變數命名衝突：將變數更名，避免與全域範疇產生任何阻斷錯誤
   var calc631Pct = 0, calc50Pct = 0, calcBondPct = 0, calcCashPct = 0, realBetaVal = "0.00";
   if (totalAssets > 0) {
     calc631Pct = (etf631Val / totalAssets * 100);
@@ -820,8 +819,9 @@ async function loadFromCloud() {
 }
 
 function getSettings(){
+  // 🛡️ 徹底修正：將原先手誤混入的 priceBond = priceBondval 改回正確的物件冒號語法 :
   return {
-    shares:val('shares'), price631:price631val, shares0050:val('shares0050'), price0050:price50val, sharesBond:val('sharesBond'), priceBond=priceBondval,
+    shares:val('shares'), price631:price631val, shares0050:val('shares0050'), price0050:price50val, sharesBond:val('sharesBond'), priceBond:priceBondval,
     cash:val('cash'), rate631:val('rate631'), rate50:val('rate50'), rateBond:val('rateBond'), pct631:val('pct631'), pct50:val('pct50'), pctBond:val('pctBond'),
     addOnEnabled:addOnEnabled, addOnSource:addOnSource, addOnAmt:val('addOnAmt'), addOnDrop:val('addOnDrop'), addOnYear:val('addOnYear'),
     loanAmount:val('loanAmount'), loanRate:parseFloat(g('loanRate').value)||3.5, loanStart:g('loanStart').value, loanTotalMonths:val('loanTotalMonths')||84,
