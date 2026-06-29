@@ -15,7 +15,8 @@ function fmt(v){
 
 async function autoRefreshAllPrices() {
   g('storageMsg').textContent = '⚡ 正在自動抓取今日即時股價...';
-  isCloudSyncing = true;
+  var oldLock = isCloudSyncing;
+  isCloudSyncing = true; // 抓取期間鎖定同步
   try {
     await Promise.all([
       fetchPriceSilent('00631L.TW', 'price631', 'price631val', 'p631time', 'btn631'),
@@ -23,7 +24,9 @@ async function autoRefreshAllPrices() {
       fetchPriceSilent('00865B.TW', 'priceBond', 'priceBondval', 'p865time', 'btn865')
     ]);
   } catch(e) {}
-  isCloudSyncing = false;
+  isCloudSyncing = oldLock;
+  
+  // 抓取完後，一次性更新並同步到雲端
   updateAndSync();
   showMsg('storageMsg', '✅ 今日最新股價已自動更新完畢', 3000);
 }
@@ -154,11 +157,15 @@ function update(){
   g('betaVal').textContent=beta; g('betaVal').style.color=beta>1.2?'#ff8a65':'#a5d6a7';
   g('betaType').textContent=beta>1.4?'積極型':beta>0.8?'穩健型':'保守型'; g('betaType').style.color=beta>1.4?'#ff8a65':'#a5d6a7';
 
-  var r631Pct = totalAssets > 0 ? (etf631Val / totalAssets * 100) : 0;
-  var r50Pct = totalAssets > 0 ? (etf50Val / totalAssets * 100) : 0;
-  var rBondPct = totalAssets > 0 ? (etfBondVal / totalAssets * 100) : 0;
-  var rCashPct = totalAssets > 0 ? (cash / totalAssets * 100) : 0;
-  var realBeta = (r631Pct / 100 * 1.9 + r50Pct / 100 * 1.0 + rBondPct / 100 * 0.05).toFixed(2);
+  // 修正：防禦 totalAssets 為 0 導致分母為零的 NaN 錯誤
+  var r631Pct = 0, r50Pct = 0, rBondPct = 0, rCashPct = 0, realBeta = "0.00";
+  if (totalAssets > 0) {
+    r631Pct = (etf631Val / totalAssets * 100);
+    r50Pct = (etf50Val / totalAssets * 100);
+    rBondPct = (etfBondVal / totalAssets * 100);
+    rCashPct = (cash / totalAssets * 100);
+    realBeta = (r631Pct / 100 * 1.9 + r50Pct / 100 * 1.0 + rBondPct / 100 * 0.05).toFixed(2);
+  }
   
   g('realEffectiveBeta').textContent = `真實組合Beta: ${realBeta}`;
   
@@ -202,10 +209,11 @@ function update(){
   var loanToNet=netAssets>0?(loan/netAssets*100).toFixed(1):'999'; var ls=g('loanSummary');
   var ld=g('loanDetail');
 
+  // 修正：重構並導正信貸摘要區塊的條件鏈，徹底解除邏輯死鎖
   if(!loan || loan===0){
-    ls.innerHTML='<div>年利息 <b style="color:#ef9a9a">'+fmt(loanInterest)+'</b></div>'
-      +'<div>借款/總資產 <b style="color:#ffb74d">'+loanToAsset+'%</b></div>'
-      +'<div>借款/淨資產 <b style="color:#ff8a65">'+loanToNet+'%</b></div>'
+    ls.innerHTML='<div>年利息 <b style="color:#ef9a9a">'+fmt(0)+'</b></div>'
+      +'<div>借款/總資產 <b style="color:#ffb74d">0.0%</b></div>'
+      +'<div>借款/淨資產 <b style="color:#ff8a65">0.0%</b></div>'
       +'<div>淨資產 <b style="color:#a5d6a7">'+fmt(netAssets)+'</b></div>';
     ld.style.display='none';
   } else {
@@ -217,6 +225,7 @@ function update(){
     var elapsed=(nowYear-startYear)*12+(nowMonth-startMonth);
     var remaining=Math.max(0,totalMonths-elapsed); var paidMonths=Math.min(elapsed,totalMonths);
     var remainingPrincipal=monthRate>0 ? monthlyPayment*(1-Math.pow(1+monthRate,-remaining))/monthRate : remaining*monthlyPayment;
+    
     ls.innerHTML='<div>年利息 <b style="color:#ef9a9a">'+fmt(loanInterest)+'</b></div>'
       +'<div>借款/總資產 <b style="color:#ffb74d">'+loanToAsset+'%</b></div>'
       +'<div>借款/淨資產 <b style="color:#ff8a65">'+loanToNet+'%</b></div>'
@@ -232,11 +241,9 @@ function update(){
     var v50=init50*Math.pow(1+rate50/100,i); 
     var vBond=initBond*Math.pow(1+rateBond/100,i);
     
-    // 計算不含加碼的基礎對照組總額
     var vCashBase=initCash;
     var totalBase=v631+v50+vBond+vCashBase;
 
-    // 計算實際模擬（含大跌加碼影響）
     var cashAfter=addOnEnabled&&addOnSource=='cash'?Math.max(0,initCash-addOnAmt):initCash;
     var vCash=addOnEnabled&&addOnSource=='cash'&&i>=addOnYear?cashAfter:initCash;
     var vAdd=addOnEnabled&&i>=addOnYear?addOnAmt*Math.pow(1+rate631/100,i-addOnYear):0;
@@ -249,13 +256,13 @@ function update(){
       vBond:Math.round(vBond), 
       vCash:Math.round(vCash), 
       total:Math.round(v631+vAdd+v50+vBond+vCash),
-      totalBase:Math.round(totalBase) // 修正：精準補回未加碼基準點
+      totalBase:Math.round(totalBase)
     });
   }
   drawChart(chartData, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOnYear);
 
   var final=chartData[10], five=chartData[5];
-  var totalCost=totalAssets+(addOnEnabled&&addOnSource=='new'?addOnAmt:0); // 修正：此處 addOnAmt 內部單位已調整一致
+  var totalCost=totalAssets+(addOnEnabled&&addOnSource=='new'?addOnAmt:0);
   
   var cards=[
     {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:'#81d4fa',detail:'不加碼對照 '+fmt(five.totalBase)},
@@ -267,8 +274,12 @@ function update(){
     rc.innerHTML+='<div class="stat-card" style="background:'+c.color+'11;border:1px solid '+c.color+'33"><div class="stat-label">'+c.label+'</div><div class="stat-val">'+c.val+'</div><div class="stat-sub">'+c.sub+'</div><div class="stat-detail">'+c.detail+'</div></div>';
   });
 
-  var stockExp=etf631Val+etf50Val+etfBondVal; var stockExpPct=(stockExp/totalAssets*100).toFixed(1);
-  var e631Pct=(etf631Val/totalAssets*100).toFixed(1), eBondPct=(etfBondVal/totalAssets*100).toFixed(1), eCashPct=(cash/totalAssets*100).toFixed(1), e50Pct=(etf50Val/totalAssets*100).toFixed(1);
+  var stockExp = 0, stockExpPct = "0.0", e631Pct = "0.0", e50Pct = "0.0", eBondPct = "0.0", eCashPct = "0.0";
+  if (totalAssets > 0) {
+    stockExp=etf631Val+etf50Val+etfBondVal; stockExpPct=(stockExp/totalAssets*100).toFixed(1);
+    e631Pct=(etf631Val/totalAssets*100).toFixed(1); eBondPct=(etfBondVal/totalAssets*100).toFixed(1); 
+    eCashPct=(cash/totalAssets*100).toFixed(1); e50Pct=(etf50Val/totalAssets*100).toFixed(1);
+  }
 
   var eb=g('expBar'); eb.innerHTML='';
   var expActiveArr = [[parseFloat(e631Pct),'#4fc3f7'],[parseFloat(e50Pct),'#5c6bc0'],[parseFloat(eBondPct),'#a5d6a7'],[parseFloat(eCashPct),'#ffd54f']].filter(function(x){return x[0]>0;});
@@ -306,7 +317,7 @@ function update(){
 
   var lc=g('lossCards'); lc.innerHTML='';
   [{label:'市場跌 -20%',drop:0.20},{label:'市場跌 -30%',drop:0.30},{label:'市場跌 -50%',drop:0.50}].forEach(function(s){
-    var loss631=etf631Val*s.drop*1.9, loss50=etf50Val*s.drop*1.0, lossBond=etfBondVal*s.drop*0.05; var total=loss631+loss50+lossBond; var pct=(total/totalAssets*100).toFixed(1);
+    var loss631=etf631Val*s.drop*1.9, loss50=etf50Val*s.drop*1.0, lossBond=etfBondVal*s.drop*0.05; var total=loss631+loss50+lossBond; var pct = totalAssets > 0 ? (total/totalAssets*100).toFixed(1) : "0.0";
     lc.innerHTML+='<div class="stat-card" style="background:rgba(239,83,80,0.08);border:1px solid rgba(239,83,80,0.2)"><div style="font-size:10px;color:#ef9a9a;font-weight:700;margin-bottom:4px">'+s.label+'</div><div style="font-size:16px;font-weight:800;color:#fff">-'+fmt(total)+'</div><div style="font-size:10px;color:#ef5350;margin:2px 0">-'+pct+'%</div></div>';
   });
 }
@@ -378,7 +389,7 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
   
   if (addOnEnabled && addOnSource === 'new') {
     var xTrigger = xPos(addOnYear);
-    var yLineAfter = yPos(costBase + addOnAmt); // 修正：此處已不重複乘 10000
+    var yLineAfter = yPos(costBase + addOnAmt);
     
     ctx.beginPath();
     ctx.moveTo(xPos(0), yLineInitial);
@@ -428,6 +439,7 @@ function updateAndSync() {
 
   clearTimeout(window.syncTimer);
   window.syncTimer = setTimeout(async function() {
+    if (isCloudSyncing) return; // 雙重防禦檢查
     g('cloudStatus').textContent = '⚡ 同步中...';
     try {
       var data = getSettings();
@@ -449,13 +461,14 @@ async function loadFromCloud() {
   saveSyncConfig();
   g('cloudStatus').textContent = '⚡ 下載中...';
   try {
-    isCloudSyncing = true;
+    isCloudSyncing = true; // 鎖定同步機制
     var res = await fetch(url + key + '.json');
     if(res.ok) {
       var cloudData = await res.json();
       if(cloudData) {
         applySettings(cloudData);
         g('cloudStatus').textContent = '✅ 雲端連線成功';
+        // 優化：下載後才非同步抓即時價，避免時序衝突引起的連續閃爍
         autoRefreshAllPrices();
       } else {
         g('cloudStatus').textContent = '💡 雲端無資料 (已初始化)';
@@ -477,6 +490,8 @@ function getSettings(){
 
 function applySettings(s){
   if(!s) return;
+  isCloudSyncing = true; // 修正：解析寫入期間嚴格鎖死 updateAndSync 上傳機制
+  
   if(s.shares!=null) g('shares').value=s.shares;
   if(s.price631!=null){ price631val=s.price631; g('price631').value=s.price631; }
   if(s.shares0050!=null) g('shares0050').value=s.shares0050;
@@ -499,7 +514,9 @@ function applySettings(s){
   if(s.loanRate!=null) g('loanRate').value=s.loanRate;
   if(s.loanStart!=null) g('loanStart').value=s.loanStart;
   if(s.loanTotalMonths!=null) g('loanTotalMonths').value=s.loanTotalMonths;
+  
   update();
+  isCloudSyncing = false; // 解析完成，釋放同步鎖
 }
 
 makePresets('rate631Presets','rate631',[{label:'10%',val:10},{label:'13%',val:13},{label:'14%',val:14},{label:'16%',val:16}],'%',true);
@@ -522,6 +539,7 @@ makePresets('addOnYearPresets','addOnYear',[{label:'第2年',val:2},{label:'第5
 makePresets('loanRatePresets','loanRate',[{label:'2.5%',val:2.5},{label:'3%',val:3},{label:'3.5%',val:3.5},{label:'4%',val:4}],'%',false);
 makePresets('loanMonthsPresets','loanTotalMonths',[{label:'36期',val:36},{label:'60期',val:60},{label:'84期',val:84},{label:'120期',val:120}],'月',false);
 
+// 初始化邏輯優化
 try{
   var confStr = localStorage.getItem(CONF_KEY);
   if(confStr) {
