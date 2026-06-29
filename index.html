@@ -1,346 +1,3 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>投資組合模擬器 - 雲端自動更新版</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#060d18;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:16px 12px 40px;min-height:100vh}
-h1{font-size:19px;font-weight:800;text-align:center;color:#fff;margin-bottom:4px}
-.sub{text-align:center;font-size:11px;color:#546e7a;margin-bottom:14px}
-.card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;margin-bottom:12px;max-width:640px;margin-left:auto;margin-right:auto}
-.card-blue{background:rgba(79,195,247,0.06);border-color:rgba(79,195,247,0.25)}
-.card-orange{background:rgba(255,183,77,0.05);border-color:rgba(255,183,77,0.2)}
-.card-red{background:rgba(239,83,80,0.06);border-color:rgba(239,83,80,0.25)}
-.card-purple{background:rgba(206,147,216,0.06);border-color:rgba(206,147,216,0.2)}
-.card-addOn{background:rgba(255,152,0,0.06);border-color:rgba(255,152,0,0.25)}
-.section-title{font-size:11px;font-weight:700;margin-bottom:12px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px}
-label{font-size:10px;color:#78909c;display:block;margin-bottom:5px}
-input[type=text],input[type=number],input[type=password]{width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:7px 10px;color:#fff;font-size:14px;font-weight:700;outline:none}
-input[type=range]{width:100%;accent-color:#4fc3f7;cursor:pointer}
-.slider-row{margin-bottom:14px}
-.slider-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
-.slider-val{border-radius:20px;padding:1px 12px;font-size:14px;font-weight:800}
-.presets{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap}
-.preset-btn{border-radius:20px;padding:2px 9px;font-size:10px;cursor:pointer;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#78909c}
-.preset-btn.active{background:rgba(79,195,247,0.25);border-color:#4fc3f7;color:#4fc3f7;font-weight:700}
-.stat-card{border-radius:10px;padding:10px 8px;text-align:center}
-.stat-label{font-size:9px;color:#78909c;margin-bottom:3px}
-.stat-val{font-size:18px;font-weight:800;color:#fff}
-.stat-sub{font-size:10px;color:#4caf50;margin:3px 0}
-.stat-detail{font-size:9px;color:#546e7a;line-height:1.4}
-.bar-container{height:12px;border-radius:6px;overflow:hidden;display:flex;gap:2px;margin-bottom:8px}
-.info-row{font-size:10px;color:#546e7a;margin-top:4px}
-.btn{border-radius:20px;padding:4px 14px;font-size:11px;cursor:pointer;font-weight:600;border:none}
-.price-row{display:flex;gap:6px;align-items:center}
-.price-row input{flex:1}
-.refresh-btn{background:rgba(79,195,247,0.2);border:1px solid rgba(79,195,247,0.4);border-radius:8px;padding:6px 10px;color:#4fc3f7;cursor:pointer;font-size:16px;flex-shrink:0}
-.chart-wrap{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 8px;max-width:640px;margin:0 auto 12px}
-canvas{display:block;width:100%;border-radius:6px}
-.legend{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px}
-.legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#90a4ae}
-.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
-.legend-dot-dash{width:16px;height:0;border-top:2px dashed #ef9a9a;flex-shrink:0;margin-top:4px}
-.toggle-btn{padding:3px 14px;border-radius:20px;font-size:11px;cursor:pointer;font-weight:700;border:none}
-.footer{text-align:center;font-size:10px;color:#37474f;max-width:640px;margin:0 auto;padding-top:8px}
-.msg{font-size:11px;font-weight:600}
-.tab-btn{border-radius:20px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:700;border:1px solid}
-</style>
-</head>
-<body>
-
-<h1>四部位＋大跌加碼</h1>
-<p class="sub">十年資產模擬</p>
-
-<!-- 雲端同步面板 -->
-<div class="card card-purple" style="margin-bottom:14px;">
-  <p class="section-title" style="color:#ce93d8;margin-bottom:8px;">☁️ Firebase 雲端即時同步鎖</p>
-  <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:8px;align-items:end;">
-    <div>
-      <label>Firebase 資料庫網址 (結尾需有 /)</label>
-      <input type="text" id="fbUrl" placeholder="https://xxx-rtdb.firebaseio.com/" onblur="saveSyncConfig()">
-    </div>
-    <div>
-      <label>自訂個人密鑰</label>
-      <input type="password" id="fbKey" placeholder="任意密碼" onblur="saveSyncConfig()">
-    </div>
-    <button class="btn" style="background:#ce93d8;color:#060d18;height:35px;padding:0 16px;" onclick="loadFromCloud()">連線同步</button>
-  </div>
-  <div style="margin-top:6px;display:flex;justify-content:between;font-size:10px;color:#78909c;">
-    <span id="storageMsg">首次使用請先輸入網址與密鑰</span>
-    <span id="cloudStatus" style="color:#ffd54f;margin-left:auto;">未連線</span>
-  </div>
-</div>
-
-<!-- 持股設定 -->
-<div class="card card-blue">
-  <p class="section-title" style="color:#4fc3f7">📊 持股與實時配置</p>
-  
-  <!-- 00631L -->
-  <div class="grid2" style="margin-bottom:10px">
-    <div>
-      <label>00631L 持股數</label>
-      <input type="number" id="shares" value="71000" oninput="updateAndSync()">
-    </div>
-    <div>
-      <label>00631L 股價 <span id="p631time" style="color:#4caf50;font-size:9px"></span></label>
-      <div class="price-row">
-        <input type="text" id="price631" value="40.2" onblur="applyPrice('price631','price631val')" style="color:#4fc3f7">
-        <button class="refresh-btn" id="btn631" onclick="fetchPrice631()" title="更新股價">🔄</button>
-      </div>
-      <div class="info-row">市值 <span id="val631" style="color:#4fc3f7">-</span></div>
-    </div>
-  </div>
-
-  <!-- 0050 -->
-  <div class="grid2" style="margin-bottom:10px">
-    <div>
-      <label>0050 持股數</label>
-      <input type="number" id="shares0050" value="5000" oninput="updateAndSync()">
-    </div>
-    <div>
-      <label>0050 股價 <span id="p50time" style="color:#4caf50;font-size:9px"></span></label>
-      <div class="price-row">
-        <input type="text" id="price0050" value="150.0" onblur="applyPrice('price0050','price50val')" style="color:#5c6bc0">
-        <button class="refresh-btn" id="btn50" style="background:rgba(92,107,192,0.2);border-color:rgba(92,107,192,0.4);color:#5c6bc0" onclick="fetchPrice0050()" title="更新股價">🔄</button>
-      </div>
-      <div class="info-row">市值 <span id="val0050" style="color:#5c6bc0">-</span></div>
-    </div>
-  </div>
-
-  <!-- 00865B -->
-  <div class="grid2" style="margin-bottom:10px">
-    <div>
-      <label>00865B 持股數</label>
-      <input type="number" id="sharesBond" value="9000" oninput="updateAndSync()">
-    </div>
-    <div>
-      <label>00865B 股價 <span id="p865time" style="color:#4caf50;font-size:9px"></span></label>
-      <div class="price-row">
-        <input type="text" id="priceBond" value="48.15" onblur="applyPrice('priceBond','priceBondval')" style="color:#a5d6a7">
-        <button class="refresh-btn" id="btn865" style="background:rgba(165,214,167,0.2);border-color:rgba(165,214,167,0.4);color:#a5d6a7" onclick="fetchPriceBond()" title="更新股價">🔄</button>
-      </div>
-      <div class="info-row">市值 <span id="valBond" style="color:#a5d6a7">-</span></div>
-    </div>
-  </div>
-
-  <!-- 現金與總資產 -->
-  <div class="grid2" style="margin-bottom:12px">
-    <div>
-      <label>現金（萬元）</label>
-      <div style="display:flex;align-items:center;gap:4px">
-        <input type="number" id="cash" value="200" oninput="updateAndSync()" style="color:#ffd54f">
-        <span style="font-size:11px;color:#78909c;flex-shrink:0">萬</span>
-      </div>
-    </div>
-    <div style="display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:2px">
-      <div style="font-size:10px;color:#546e7a">真實總資產</div>
-      <div id="totalAssets" style="font-size:18px;font-weight:800;color:#ce93d8">-</div>
-      <div id="assetBreakdown" style="font-size:10px;color:#546e7a"></div>
-    </div>
-  </div>
-  
-  <!-- 真實持股配置權重條 -->
-  <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;margin-top:6px;">
-    <div style="font-size:10px;color:#78909c;margin-bottom:6px;display:flex;justify-content:between;">
-      <span>📊 當前真實資產配置權重</span>
-      <span id="realEffectiveBeta" style="margin-left:auto;color:#ffb74d;">真實組合Beta: -</span>
-    </div>
-    <div class="bar-container" id="realAllocBar" style="height:14px;margin-bottom:6px;"></div>
-    <div id="realAllocLabels" style="display:flex;gap:12px;font-size:10px;flex-wrap:wrap;"></div>
-  </div>
-</div>
-
-<!-- 借款設定 -->
-<div class="card card-orange">
-  <p class="section-title" style="color:#ffb74d">🏦 信貸借款設定</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
-    <div>
-      <label>借款金額（萬元）</label>
-      <div style="display:flex;align-items:center;gap:4px">
-        <input type="number" id="loanAmount" value="155" oninput="updateAndSync()" style="color:#ffb74d">
-        <span style="font-size:11px;color:#78909c;flex-shrink:0">萬</span>
-      </div>
-    </div>
-    <div>
-      <label>年利率（%）</label>
-      <input type="text" id="loanRate" value="4.23" onblur="updateAndSync()" style="color:#ffb74d">
-      <div class="presets" id="loanRatePresets"></div>
-    </div>
-    <div>
-      <label>貸款開始日期</label>
-      <input type="text" id="loanStart" value="2026-06" placeholder="YYYY-MM" onblur="updateAndSync()" style="color:#ffb74d">
-    </div>
-    <div>
-      <label>貸款總期數（月）</label>
-      <input type="number" id="loanTotalMonths" value="60" min="12" max="360" oninput="updateAndSync()" style="color:#ffb74d">
-      <div class="presets" id="loanMonthsPresets"></div>
-    </div>
-    <div id="loanSummary" style="font-size:10px;color:#546e7a;display:flex;flex-direction:column;justify-content:center;gap:4px"></div>
-  </div>
-  <div id="loanDetail" style="display:none;margin-top:10px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:10px;color:#78909c"></div>
-</div>
-
-<!-- 曝險分析 -->
-<div class="card card-red">
-  <p class="section-title" style="color:#ef9a9a">⚠️ 曝險分析</p>
-  <div style="font-size:10px;color:#78909c;margin-bottom:8px">目前曝險比例（占總資產）</div>
-  <div class="bar-container" id="expBar"></div>
-  <div class="grid4" id="expCards" style="margin-bottom:10px"></div>
-  
-  <div id="combinedDefenseCard" style="margin-bottom:12px;padding:10px;background:rgba(255,213,79,0.06);border:1px solid rgba(255,213,79,0.2);border-radius:8px;text-align:center;font-size:11px;font-weight:600;"></div>
-  
-  <div id="expTotal" style="font-size:11px;color:#90a4ae;text-align:center;margin-bottom:10px"></div>
-  <div id="loanExpCards"></div>
-  <div style="font-size:10px;color:#78909c;margin-bottom:8px;margin-top:10px">最大損失情境</div>
-  <div class="grid3" id="lossCards"></div>
-  <div style="font-size:10px;color:#546e7a;text-align:center;margin-top:6px">※ 00631L以 Beta 1.9；0050以 Beta 1.0；00865B以 Beta 0.05 計算</div>
-</div>
-
-<!-- 年化＋配置 -->
-<div class="card">
-  <div class="grid2">
-    <div>
-      <p class="section-title" style="color:#90caf9">📈 模擬預期年化報酬率</p>
-      <div class="slider-row">
-        <div class="slider-label">
-          <span style="font-size:11px;color:#4fc3f7;font-weight:600">00631L</span>
-          <span id="rate631Label" class="slider-val" style="background:rgba(79,195,247,0.15);border:1px solid rgba(79,195,247,0.4);color:#4fc3f7">14%</span>
-        </div>
-        <input type="range" id="rate631" min="6" max="22" value="14" oninput="updateSlider('rate631')">
-        <div class="presets" id="rate631Presets"></div>
-      </div>
-      <div class="slider-row">
-        <div class="slider-label">
-          <span style="font-size:11px;color:#5c6bc0;font-weight:600">0050</span>
-          <span id="rate50Label" class="slider-val" style="background:rgba(92,107,192,0.15);border:1px solid rgba(92,107,192,0.4);color:#5c6bc0">9%</span>
-        </div>
-        <input type="range" id="rate50" min="4" max="16" value="9" oninput="updateSlider('rate50')">
-        <div class="presets" id="rate50Presets"></div>
-      </div>
-      <div class="slider-row">
-        <div class="slider-label">
-          <span style="font-size:11px;color:#a5d6a7;font-weight:600">00865B</span>
-          <span id="rateBondLabel" class="slider-val" style="background:rgba(165,214,167,0.15);border:1px solid rgba(165,214,167,0.4);color:#a5d6a7">4.5%</span>
-        </div>
-        <input type="range" id="rateBond" min="2" max="8" step="0.5" value="4.5" oninput="updateSlider('rateBond')">
-        <div class="presets" id="rateBondPresets"></div>
-      </div>
-    </div>
-    <div>
-      <p class="section-title" style="color:#ce93d8">⚖️ 模擬預期配置目標</p>
-      <div class="slider-row">
-        <div class="slider-label">
-          <span style="font-size:11px;color:#4fc3f7;font-weight:600">00631L</span>
-          <span id="pct631Label" class="slider-val" style="background:rgba(79,195,247,0.15);border:1px solid rgba(79,195,247,0.4);color:#4fc3f7">40%</span>
-        </div>
-        <input type="range" id="pct631" min="10" max="80" step="5" value="40" oninput="updateSlider('pct631')">
-        <div class="presets" id="pct631Presets"></div>
-      </div>
-      <div class="slider-row">
-        <div class="slider-label">
-          <span style="font-size:11px;color:#5c6bc0;font-weight:600">0050</span>
-          <span id="pct50Label" class="slider-val" style="background:rgba(92,107,192,0.15);border:1px solid rgba(92,107,192,0.4);color:#5c6bc0">20%</span>
-        </div>
-        <input type="range" id="pct50" min="0" max="60" step="5" value="20" oninput="updateSlider('pct50')">
-        <div class="presets" id="pct50Presets"></div>
-      </div>
-      <div class="slider-row">
-        <div class="slider-label">
-          <span style="font-size:11px;color:#a5d6a7;font-weight:600">00865B</span>
-          <span id="pctBondLabel" class="slider-val" style="background:rgba(165,214,167,0.15);border:1px solid rgba(165,214,167,0.4);color:#a5d6a7">20%</span>
-        </div>
-        <input type="range" id="pctBond" min="0" max="40" step="5" value="20" oninput="updateSlider('pctBond')">
-        <div class="presets" id="pctBondPresets"></div>
-      </div>
-      <div id="cashPctInfo" style="font-size:10px;color:#ffd54f"></div>
-    </div>
-  </div>
-</div>
-
-<!-- 配置條 -->
-<div class="card" style="max-width:640px;margin:0 auto 12px">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-    <div style="flex:1">
-      <div style="font-size:10px;color:#546e7a;margin-bottom:5px">模擬再平衡分佈</div>
-      <div class="bar-container" id="allocBar"></div>
-      <div id="allocLabels" style="display:flex;gap:10px;font-size:10px;flex-wrap:wrap"></div>
-    </div>
-    <div style="text-align:right;margin-left:12px">
-      <div style="font-size:10px;color:#546e7a">模擬組合Beta</div>
-      <div id="betaVal" style="font-size:22px;font-weight:800">-</div>
-      <div id="betaType" style="font-size:9px"></div>
-    </div>
-  </div>
-</div>
-
-<!-- 大跌加碼 -->
-<div class="card card-addOn">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-    <p class="section-title" style="color:#ff9800;margin-bottom:0">📉 大跌加碼（僅 00631L）</p>
-    <button id="addOnToggle" class="toggle-btn" style="background:rgba(255,152,0,0.25);border-color:#ff9800;color:#ff9800" onclick="toggleAddOn()">✓ 啟用</button>
-  </div>
-  <div id="addOnBody">
-    <div class="grid2">
-      <div>
-        <div style="font-size:10px;color:#78909c;margin-bottom:6px">資金來源</div>
-        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-          <button id="srcCash" class="tab-btn" style="background:rgba(255,152,0,0.25);border-color:#ff9800;color:#ff9800" onclick="setSource('cash')">防禦現金扣除</button>
-          <button id="srcNew" class="tab-btn" style="background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.1);color:#78909c" onclick="setSource('new')">額外新增資金</button>
-        </div>
-        <div class="slider-row">
-          <div class="slider-label">
-            <span style="font-size:11px;color:#ff9800;font-weight:600">加碼金額</span>
-            <span id="addOnAmtLabel" class="slider-val" style="background:rgba(255,152,0,0.2);border:1px solid rgba(255,152,0,0.4);color:#ff9800">50萬</span>
-          </div>
-          <input type="range" id="addOnAmt" min="1" max="200" step="1" value="50" oninput="updateSlider('addOnAmt')">
-          <div class="presets" id="addOnAmtPresets"></div>
-        </div>
-      </div>
-      <div>
-        <div class="slider-row">
-          <div class="slider-label">
-            <span id="dropLabel" style="font-size:11px;color:#ef9a9a;font-weight:600">觸發跌幅</span>
-            <span id="addOnDropLabel" class="slider-val" style="background:rgba(239,154,154,0.15);border:1px solid rgba(239,154,154,0.4);color:#ef9a9a">-25%</span>
-          </div>
-          <input type="range" id="addOnDrop" min="10" max="40" step="5" value="25" oninput="updateSlider('addOnDrop')">
-          <div class="presets" id="addOnDropPresets"></div>
-        </div>
-        <div class="slider-row">
-          <div class="slider-label">
-            <span style="font-size:11px;color:#b39ddb;font-weight:600">發生在第幾年</span>
-            <span id="addOnYearLabel" class="slider-val" style="background:rgba(179,157,219,0.15);border:1px solid rgba(179,157,219,0.4);color:#b39ddb">2年</span>
-          </div>
-          <input type="range" id="addOnYear" min="1" max="10" step="1" value="2" oninput="updateSlider('addOnYear')">
-          <div class="presets" id="addOnYearPresets"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- 圖表 -->
-<div class="chart-wrap">
-  <canvas id="chart" height="260"></canvas>
-  <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#4fc3f7"></div>00631L</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ff9800"></div>加碼部位</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#5c6bc0"></div>0050</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#a5d6a7"></div>00865B</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ffd54f"></div>現金</div>
-    <div class="legend-item"><div class="legend-dot-dash"></div>投入成本線</div>
-  </div>
-</div>
-
-<!-- 結果卡片欄位 -->
-<div class="grid3" style="max-width:640px;margin:0 auto 12px" id="resultCards"></div>
-
-<p class="footer">🚀 雲端自動版：登入或開啟網頁時會全自動更新最新股價並上傳。</p>
-
 <script>
 var STORAGE_KEY='portfolio-v4';
 var CONF_KEY='portfolio-sync-conf';
@@ -381,7 +38,6 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
     var price = json.chart.result[0].meta.regularMarketPrice;
     if (price) {
       g(inputId).value = price;
-      // 【完全綁定修復】嚴格根據傳入的變數容器名稱，精準寫入對應全域變數中
       if (varName === 'price631val') price631val = price; 
       else if (varName === 'price50val') price50val = price;
       else if (varName === 'priceBondval') priceBondval = price;
@@ -395,7 +51,6 @@ async function fetchPriceSilent(ticker, inputId, varName, timeId, btnId) {
       var priceAlt = jsonAlt.chart.result[0].meta.regularMarketPrice;
       if (priceAlt) {
         g(inputId).value = priceAlt;
-        // 【完全綁定修復】備援 API 對應全域變數修正
         if (varName === 'price631val') price631val = priceAlt;
         else if (varName === 'price50val') price50val = priceAlt;
         else if (varName === 'priceBondval') priceBondval = priceAlt;
@@ -545,14 +200,15 @@ function update(){
   var loanInterest=loan*loanRate/100; 
   var loanToAsset= (totalAssets) > 0 ? (loan/totalAssets*100).toFixed(1) : '0.0';
   var loanToNet=netAssets>0?(loan/netAssets*100).toFixed(1):'999'; var ls=g('loanSummary');
-  if(!loan||loan===0){
+  var ld=g('loanDetail');
+
+  if(!loan || loan===0){
     ls.innerHTML='<div>年利息 <b style="color:#ef9a9a">'+fmt(loanInterest)+'</b></div>'
       +'<div>借款/總資產 <b style="color:#ffb74d">'+loanToAsset+'%</b></div>'
       +'<div>借款/淨資產 <b style="color:#ff8a65">'+loanToNet+'%</b></div>'
       +'<div>淨資產 <b style="color:#a5d6a7">'+fmt(netAssets)+'</b></div>';
-  }
-  var ld=g('loanDetail');
-  if(loan>0){
+    ld.style.display='none';
+  } else {
     ld.style.display=''; var monthRate=loanRate/100/12; var totalMonths=parseInt(g('loanTotalMonths').value)||84;
     var monthlyPayment=monthRate>0 ? loan*monthRate*Math.pow(1+monthRate,totalMonths)/(Math.pow(1+monthRate,totalMonths)-1) : loan/totalMonths;
     var startStr=g('loanStart').value||'2026-06'; var parts=startStr.split('-');
@@ -568,22 +224,38 @@ function update(){
       +'<div>剩餘期數 <b style="color:#ffcc80">'+remaining+'/'+totalMonths+' 個月</b></div>'
       +'<div>已繳 <b style="color:#a5d6a7">'+paidMonths+' 個月</b></div>';
     ld.innerHTML='每月還款 <b style="color:#ffb74d">'+fmt(monthlyPayment)+'</b> 每月利息約 <b style="color:#ef9a9a">'+fmt(loanInterest/12)+'</b><br>剩餘本金 <b style="color:#ff8a65">'+fmt(remainingPrincipal)+'</b> 剩餘期數 <b style="color:#ffcc80">'+remaining+' 個月</b>';
-  } else { ld.style.display='none'; }
+  }
 
   var chartData=[];
   for(var i=0;i<=10;i++){
     var v631=init631*Math.pow(1+rate631/100,i); 
     var v50=init50*Math.pow(1+rate50/100,i); 
     var vBond=initBond*Math.pow(1+rateBond/100,i);
+    
+    // 計算不含加碼的基礎對照組總額
+    var vCashBase=initCash;
+    var totalBase=v631+v50+vBond+vCashBase;
+
+    // 計算實際模擬（含大跌加碼影響）
     var cashAfter=addOnEnabled&&addOnSource=='cash'?Math.max(0,initCash-addOnAmt):initCash;
     var vCash=addOnEnabled&&addOnSource=='cash'&&i>=addOnYear?cashAfter:initCash;
     var vAdd=addOnEnabled&&i>=addOnYear?addOnAmt*Math.pow(1+rate631/100,i-addOnYear):0;
-    chartData.push({year:i, v631:Math.round(v631), vAdd:Math.round(vAdd), v50:Math.round(v50), vBond:Math.round(vBond), vCash:Math.round(vCash), total:Math.round(v631+vAdd+v50+vBond+vCash)});
+    
+    chartData.push({
+      year:i, 
+      v631:Math.round(v631), 
+      vAdd:Math.round(vAdd), 
+      v50:Math.round(v50), 
+      vBond:Math.round(vBond), 
+      vCash:Math.round(vCash), 
+      total:Math.round(v631+vAdd+v50+vBond+vCash),
+      totalBase:Math.round(totalBase) // 修正：精準補回未加碼基準點
+    });
   }
   drawChart(chartData, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOnYear);
 
   var final=chartData[10], five=chartData[5];
-  var totalCost=totalAssets+(addOnEnabled&&addOnSource=='new'?addOnAmt:0);
+  var totalCost=totalAssets+(addOnEnabled&&addOnSource=='new'?addOnAmt:0); // 修正：此處 addOnAmt 內部單位已調整一致
   
   var cards=[
     {label:'五年後（含加碼）',val:fmt(five.total),sub:'+'+fmt(five.total-totalAssets),color:'#81d4fa',detail:'不加碼對照 '+fmt(five.totalBase)},
@@ -706,7 +378,7 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
   
   if (addOnEnabled && addOnSource === 'new') {
     var xTrigger = xPos(addOnYear);
-    var yLineAfter = yPos(costBase + (addOnAmt * 10000));
+    var yLineAfter = yPos(costBase + addOnAmt); // 修正：此處已不重複乘 10000
     
     ctx.beginPath();
     ctx.moveTo(xPos(0), yLineInitial);
@@ -720,7 +392,7 @@ function drawChart(data, totalAssets, addOnEnabled, addOnSource, addOnAmt, addOn
     ctx.font = 'bold 18px -apple-system,sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText('原始成本: ' + fmt(costBase), xPos(0) + 10, yLineInitial - 8);
-    ctx.fillText('加碼後總成本: ' + fmt(costBase + (addOnAmt * 10000)), xTrigger + 10, yLineAfter - 8);
+    ctx.fillText('加碼後總成本: ' + fmt(costBase + addOnAmt), xTrigger + 10, yLineAfter - 8);
   } else {
     ctx.beginPath();
     ctx.moveTo(xPos(0), yLineInitial);
@@ -862,5 +534,3 @@ try{
 
 window.addEventListener('resize', function(){ update(); });
 </script>
-</body>
-</html>
